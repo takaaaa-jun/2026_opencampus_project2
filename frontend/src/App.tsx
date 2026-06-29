@@ -105,7 +105,17 @@ function App() {
 
   const activePoseFrame = mode === 'send' ? localPoseFrame : latestPoseFrame
   const keySummary = buildPoseSummary(activePoseFrame)
-  const backendBase = `http://${window.location.hostname}:8000`
+
+  // サーバーのAPIエンドポイントベースURLを設定
+  // frontendが localhost:5173 で動いている場合、APIは同じホスト（IP）の Django が動いているポート（通常は 5173、または 8000）に向ける
+  const backendBase = useMemo(() => {
+    const host = window.location.hostname
+    // 送信側が localhost:5173 で動いている場合、バックエンドサーバーのIPを手動で指定できるようにするか、あるいはURLクエリで指定できるようにする
+    const urlParams = new URLSearchParams(window.location.search)
+    const serverIp = urlParams.get('server_ip') || host
+    const serverPort = urlParams.get('server_port') || '5173'
+    return `http://${serverIp}:${serverPort}`
+  }, [])
 
   const clearPoseLoop = () => {
     if (poseTimerRef.current !== null) {
@@ -140,7 +150,7 @@ function App() {
     lastPosePostAtRef.current = now
 
     try {
-      await fetch('/api/webrtc/pose/update/', {
+      await fetch(`${backendBase}/api/webrtc/pose/update/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(frame),
@@ -183,7 +193,7 @@ function App() {
 
     if (sessionId) {
       try {
-        await fetch('/api/webrtc/close/', {
+        await fetch(`${backendBase}/api/webrtc/close/`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ session_id: sessionId }),
@@ -239,7 +249,7 @@ function App() {
           const result = pose.detectForVideo(video, timestamp)
 
           const landmarks = normalizeLandmarks(
-            (result.landmarks?.[0] ?? []) as Array<Record<string, unknown>>,
+            (result.landmarks?.[0] ?? []) as unknown as Array<Record<string, unknown>>,
           )
 
           const frame: PoseFrame = {
@@ -292,7 +302,7 @@ function App() {
       setViewerPollStatus((current) => (current === 'ready' ? 'ready' : 'polling'))
 
       try {
-        const response = await fetch(`/api/webrtc/pose/latest/?room_id=${encodeURIComponent(roomId)}`)
+        const response = await fetch(`${backendBase}/api/webrtc/pose/latest/?room_id=${encodeURIComponent(roomId)}`)
         if (response.ok) {
           const data = (await response.json()) as PoseLatestResponse
           setLatestPoseFrame(data.pose)
@@ -370,7 +380,7 @@ function App() {
       await pc.setLocalDescription(offer)
       await waitForIceGatheringComplete(pc)
 
-      const response = await fetch('/api/webrtc/offer/send/', {
+      const response = await fetch(`${backendBase}/api/webrtc/offer/send/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -434,7 +444,7 @@ function App() {
         await pc.setLocalDescription(offer)
         await waitForIceGatheringComplete(pc)
 
-        const response = await fetch('/api/webrtc/offer/view/', {
+        const response = await fetch(`${backendBase}/api/webrtc/offer/view/`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
