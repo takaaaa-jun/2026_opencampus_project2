@@ -117,3 +117,11 @@ def close(request):
     async_to_sync(peer_manager.close_session)(session_id)
 
     return JsonResponse({'ok': True})
+
+
+from django.shortcuts import render
+from django.views.decorators.clickjacking import xframe_options_exempt
+
+@xframe_options_exempt
+def index_view(request):
+    return render(request, 'index.html')
