@@ -124,6 +124,8 @@ export function drawPoseFrame(
     pointColor?: string
     lineColor?: string
     emptyText?: string
+    highlightIndices?: number[]  // ハイライト対象のインデックス
+    highlightColor?: string     // ハイライト時の点の色
   },
 ) {
   const ctx = canvas.getContext('2d')
@@ -201,14 +203,27 @@ export function drawPoseFrame(
     const x = clamp01(landmark.x) * width
     const y = clamp01(landmark.y) * height
 
+    const isHighlighted = options?.highlightIndices?.includes(index)
+    const currentPointStyle = isHighlighted
+      ? (options?.highlightColor ?? '#ff3b30') // 強調色 (デフォルト赤)
+      : pointStyle
+    
+    const currentAccentStyle = isHighlighted
+      ? '#ffffff' // ハイライト点の内側は白で光らせる
+      : accentStyle
+
+    const currentRadius = isHighlighted
+      ? pointRadius * 1.5 // ハイライトされた点は少し大きめにする
+      : pointRadius
+
     ctx.beginPath()
-    ctx.fillStyle = pointStyle
-    ctx.arc(x, y, pointRadius, 0, Math.PI * 2)
+    ctx.fillStyle = currentPointStyle
+    ctx.arc(x, y, currentRadius, 0, Math.PI * 2)
     ctx.fill()
 
     ctx.beginPath()
-    ctx.fillStyle = accentStyle
-    ctx.arc(x, y, Math.max(1.5, pointRadius * 0.5), 0, Math.PI * 2)
+    ctx.fillStyle = currentAccentStyle
+    ctx.arc(x, y, Math.max(1.5, currentRadius * 0.5), 0, Math.PI * 2)
     ctx.fill()
   }
 
