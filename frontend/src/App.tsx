@@ -8,6 +8,7 @@ import {
   type PoseFrame,
   type PoseSummaryRow,
 } from './pose'
+import { REGISTERED_FEATURES } from './features'
 
 type Mode = 'send' | 'view'
 type ConnectionStatus = 'idle' | 'requesting-camera' | 'streaming' | 'stopping' | 'error'
@@ -84,8 +85,23 @@ function App() {
   const [latestPoseFrame, setLatestPoseFrame] = useState<PoseFrame | null>(null)
   const [viewerPollStatus, setViewerPollStatus] = useState<'idle' | 'polling' | 'waiting' | 'ready'>('idle')
 
+  // ONになっている機能IDのリスト
+  const [enabledFeatureIds, setEnabledFeatureIds] = useState<string[]>([])
+
   const activePoseFrame = mode === 'send' ? localPoseFrame : latestPoseFrame
   const keySummary = buildPoseSummary(activePoseFrame)
+
+  // 有効化されている全機能からハイライト対象の関節IDを取得してマージ
+  const highlightIndices = useMemo(() => {
+    if (!activePoseFrame) return []
+    const indicesSet = new Set<number>()
+    REGISTERED_FEATURES.forEach((feature) => {
+      if (enabledFeatureIds.includes(feature.id) && feature.getHighlightIndices) {
+        feature.getHighlightIndices(activePoseFrame).forEach((idx) => indicesSet.add(idx))
+      }
+    })
+    return Array.from(indicesSet)
+  }, [activePoseFrame, enabledFeatureIds])
 
   // サーバーのAPIエンドポイントベースURLを設定
   const backendBase = useMemo(() => {
@@ -124,6 +140,8 @@ function App() {
       backgroundImage: bgImg,
       background: '#0b1220', // ダークブルー背景
       emptyText: mode === 'send' ? 'MediaPipe で骨格を検出中...' : '送信 PC のデータを待機中',
+      highlightIndices: highlightIndices,
+      highlightColor: '#ffcc00', // 強調色はネオンイエロー
     })
   }
 
@@ -430,6 +448,12 @@ function App() {
   const displayModeLabel =
     displayMode === 'video' ? '映像だけ' : displayMode === 'skeleton' ? '骨格だけ' : '同時表示'
 
+  const toggleFeature = (id: string) => {
+    setEnabledFeatureIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id],
+    )
+  }
+
   return (
     <div className="page">
       <div className="shell">
@@ -513,7 +537,7 @@ function App() {
           </div>
 
           <div className="card">
-            <h2>{mode === 'send' ? '検出データ' : '表示と接続メモ'}</h2>
+            <h2>{mode === 'send' ? '検出データ' : '表示と接続設定'}</h2>
             {mode === 'send' ? (
               <>
                 <div className="poseStats">
@@ -538,15 +562,33 @@ function App() {
               </>
             ) : (
               <>
-                <p className="note">
-                  1. 送信 PC で /send を開く
-                  <br />
-                  2. Start を押す
-                  <br />
-                  3. 別 PC で /view を開く
-                  <br />
-                  4. 自動的に中継された映像と骨格が同期します
-                </p>
+                {/* 骨格点ハイライト用プラグインタグリストの動的描画 */}
+                <div style={{ marginBottom: 24 }}>
+                  <h3 style={{ marginBottom: 12 }}>🎨 部位ハイライト設定</h3>
+                  <p className="note">ONにした部位の検出点（関節）が黄色く光ります。</p>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '12px' }}>
+                    {REGISTERED_FEATURES.map((feature) => {
+                      const isEnabled = enabledFeatureIds.includes(feature.id)
+                      return (
+                        <button
+                          key={feature.id}
+                          type="button"
+                          className={`miniButton ${toBooleanClass(isEnabled)}`}
+                          style={{
+                            padding: '8px 16px',
+                            borderRadius: '20px',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s',
+                          }}
+                          onClick={() => toggleFeature(feature.id)}
+                        >
+                          {feature.name}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+
                 <div className="poseStats">
                   <div className="poseStat">
                     <span className="poseStatLabel">接続状態</span>
