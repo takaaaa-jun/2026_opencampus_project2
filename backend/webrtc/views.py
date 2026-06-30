@@ -1,12 +1,10 @@
-from __future__ import annotations
-
 import json
-
-from asgiref.sync import async_to_sync
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
+from django.shortcuts import render
+from django.views.decorators.clickjacking import xframe_options_exempt
 
-from .media import peer_manager
+from .services import relay_service
 
 
 def _parse_json(request):
@@ -15,62 +13,6 @@ def _parse_json(request):
         return json.loads(body)
     except json.JSONDecodeError:
         return None
-
-
-@csrf_exempt
-def offer_send(request):
-    if request.method != 'POST':
-        return JsonResponse({'detail': 'Method not allowed.'}, status=405)
-
-    data = _parse_json(request)
-    if data is None:
-        return JsonResponse({'detail': 'Invalid JSON.'}, status=400)
-
-    room_id = data.get('room_id') or 'default'
-    offer = data.get('offer')
-
-    if not isinstance(offer, dict) or 'sdp' not in offer or 'type' not in offer:
-        return JsonResponse({'detail': 'offer is required.'}, status=400)
-
-    session_id, answer = async_to_sync(peer_manager.create_sender_answer)(room_id, offer)
-
-    return JsonResponse(
-        {
-            'session_id': session_id,
-            'room_id': room_id,
-            'answer': answer,
-        }
-    )
-
-
-@csrf_exempt
-def offer_view(request):
-    if request.method != 'POST':
-        return JsonResponse({'detail': 'Method not allowed.'}, status=405)
-
-    data = _parse_json(request)
-    if data is None:
-        return JsonResponse({'detail': 'Invalid JSON.'}, status=400)
-
-    room_id = data.get('room_id') or 'default'
-    offer = data.get('offer')
-
-    if not isinstance(offer, dict) or 'sdp' not in offer or 'type' not in offer:
-        return JsonResponse({'detail': 'offer is required.'}, status=400)
-
-    result = async_to_sync(peer_manager.create_viewer_answer)(room_id, offer)
-    if result is None:
-        return JsonResponse({'detail': 'Sender not ready yet.'}, status=409)
-
-    session_id, answer = result
-
-    return JsonResponse(
-        {
-            'session_id': session_id,
-            'room_id': room_id,
-            'answer': answer,
-        }
-    )
 
 
 @csrf_exempt
@@ -83,9 +25,11 @@ def pose_update(request):
         return JsonResponse({'detail': 'Invalid JSON.'}, status=400)
 
     room_id = data.get('room_id') or 'default'
-    peer_manager.update_pose(room_id, data)
-
-    return JsonResponse({'ok': True, 'room_id': room_id})
+    try:
+        relay_service.update_pose(room_id, data)
+        return JsonResponse({'ok': True, 'room_id': room_id})
+    except Exception as e:
+        return JsonResponse({'detail': str(e)}, status=500)
 
 
 def pose_latest(request):
@@ -93,30 +37,22 @@ def pose_latest(request):
         return JsonResponse({'detail': 'Method not allowed.'}, status=405)
 
     room_id = request.GET.get('room_id') or 'default'
-    pose = peer_manager.get_latest_pose(room_id)
+    pose = relay_service.get_latest_pose(room_id)
 
     if pose is None:
         return JsonResponse({'detail': 'Not found.'}, status=404)
 
-    return JsonResponse({'room_id': room_id, 'pose': pose})
-
-
-@csrf_exempt
-def close(request):
-    if request.method != 'POST':
-        return JsonResponse({'detail': 'Method not allowed.'}, status=405)
-
-    data = _parse_json(request)
-    if data is None:
-        return JsonResponse({'detail': 'Invalid JSON.'}, status=400)
-
-    session_id = data.get('session_id')
-    if not session_id:
-        return JsonResponse({'detail': 'session_id is required.'}, status=400)
-
-    async_to_sync(peer_manager.close_session)(session_id)
-
-    return JsonResponse({'ok': True})
+    # domain.PoseFrameオブジェクトを辞書に変換してレスポンス
+    return JsonResponse({
+        'room_id': pose.room_id,
+        'pose': {
+            'room_id': pose.room_id,
+            'updated_at': pose.updated_at,
+            'image_width': pose.image_width,
+            'image_height': pose.image_height,
+            'landmarks': pose.landmarks,
+        }
+    })
 
 
 @csrf_exempt
@@ -130,9 +66,14 @@ def image_update(request):
 
     room_id = data.get('room_id') or 'default'
     image_data = data.get('image')  # base64 string
-    peer_manager.update_image(room_id, image_data)
+    if not image_data:
+        return JsonResponse({'detail': 'image field is required.'}, status=400)
 
-    return JsonResponse({'ok': True, 'room_id': room_id})
+    try:
+        relay_service.update_image(room_id, image_data)
+        return JsonResponse({'ok': True, 'room_id': room_id})
+    except Exception as e:
+        return JsonResponse({'detail': str(e)}, status=500)
 
 
 def image_latest(request):
@@ -140,16 +81,16 @@ def image_latest(request):
         return JsonResponse({'detail': 'Method not allowed.'}, status=405)
 
     room_id = request.GET.get('room_id') or 'default'
-    image_data = peer_manager.get_latest_image(room_id)
+    image = relay_service.get_latest_image(room_id)
 
-    if image_data is None:
+    if image is None:
         return JsonResponse({'detail': 'Not found.'}, status=404)
 
-    return JsonResponse({'room_id': room_id, 'image': image_data})
+    return JsonResponse({
+        'room_id': image.room_id,
+        'image': image.image_data,
+    })
 
-
-from django.shortcuts import render
-from django.views.decorators.clickjacking import xframe_options_exempt
 
 @xframe_options_exempt
 def index_view(request):
