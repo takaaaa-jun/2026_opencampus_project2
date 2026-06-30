@@ -1,9 +1,9 @@
 from typing import Any, Optional
 from .domain import PoseFrame, ImageFrame
-from .repositories import room_repository, RoomRepository
+from .repositories import room_repository, InMemoryRoomRepository
 
 class RelayService:
-    def __init__(self, repo = room_repository):
+    def __init__(self, repo: InMemoryRoomRepository = room_repository):
         self._repo = repo
 
     def update_pose(self, room_id: str, pose_payload: dict) -> None:
