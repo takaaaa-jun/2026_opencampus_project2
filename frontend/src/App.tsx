@@ -10,41 +10,21 @@ import {
 } from './pose'
 
 type Mode = 'send' | 'view'
-type ConnectionStatus = 'idle' | 'requesting-camera' | 'negotiating' | 'streaming' | 'retrying' | 'stopping' | 'error'
-type OfferResponse = {
-  session_id: string
-  room_id: string
-  answer: { sdp: string; type: RTCSdpType }
-}
+type ConnectionStatus = 'idle' | 'requesting-camera' | 'streaming' | 'stopping' | 'error'
+
 type PoseLatestResponse = {
   room_id: string
   pose: PoseFrame
 }
 
+type ImageLatestResponse = {
+  room_id: string
+  image: string
+}
+
 const DEFAULT_ROOM_ID = 'default'
-const POSE_POLL_INTERVAL_MS = 250
+const POSE_POLL_INTERVAL_MS = 150
 const POSE_POST_INTERVAL_MS = 120
-
-function waitForIceGatheringComplete(pc: RTCPeerConnection) {
-  if (pc.iceGatheringState === 'complete') {
-    return Promise.resolve()
-  }
-
-  return new Promise<void>((resolve) => {
-    const checkState = () => {
-      if (pc.iceGatheringState === 'complete') {
-        pc.removeEventListener('icegatheringstatechange', checkState)
-        resolve()
-      }
-    }
-
-    pc.addEventListener('icegatheringstatechange', checkState)
-  })
-}
-
-function sleep(ms: number) {
-  return new Promise((resolve) => window.setTimeout(resolve, ms))
-}
 
 function toBooleanClass(value: boolean) {
   return value ? 'is-on' : 'is-off'
@@ -79,22 +59,23 @@ function App() {
   const mode: Mode = useMemo(() => (window.location.pathname.includes('/view') ? 'view' : 'send'), [])
 
   const localVideoRef = useRef<HTMLVideoElement | null>(null)
-  const remoteVideoRef = useRef<HTMLVideoElement | null>(null)
   const overlayCanvasRef = useRef<HTMLCanvasElement | null>(null)
-  const peerConnectionRef = useRef<RTCPeerConnection | null>(null)
   const localStreamRef = useRef<MediaStream | null>(null)
-  const sessionIdRef = useRef<string | null>(null)
   const abortRef = useRef(false)
   const poseTimerRef = useRef<number | null>(null)
   const poseBusyRef = useRef(false)
   const lastPosePostAtRef = useRef(0)
   const activePoseInstanceRef = useRef<any>(null)
+  
+  // MJPEG 画像中継用
+  const captureCanvasRef = useRef<HTMLCanvasElement | null>(null)
+  const remoteImageRef = useRef<HTMLImageElement | null>(null)
 
   const [status, setStatus] = useState<ConnectionStatus>('idle')
   const [message, setMessage] = useState(
     mode === 'send'
       ? 'カメラ PC で送信を開始します。別 PC は /view を開いて確認します。'
-      : '視聴用ページです。送信 PC が先に Start してから Connect してください。',
+      : '視聴用ページです。送信 PC が先に Start してからデータを受信します。',
   )
   const [error, setError] = useState<string | null>(null)
   const [roomId, setRoomId] = useState(DEFAULT_ROOM_ID)
@@ -107,10 +88,8 @@ function App() {
   const keySummary = buildPoseSummary(activePoseFrame)
 
   // サーバーのAPIエンドポイントベースURLを設定
-  // frontendが localhost:5173 で動いている場合、APIは同じホスト（IP）の Django が動いているポート（通常は 5173、または 8000）に向ける
   const backendBase = useMemo(() => {
     const host = window.location.hostname
-    // 送信側が localhost:5173 で動いている場合、バックエンドサーバーのIPを手動で指定できるようにするか、あるいはURLクエリで指定できるようにする
     const urlParams = new URLSearchParams(window.location.search)
     const serverIp = urlParams.get('server_ip') || host
     const serverPort = urlParams.get('server_port') || '5173'
@@ -136,9 +115,15 @@ function App() {
     if (!canvas) {
       return
     }
+    
+    // 背景イメージの指定（閲覧側かつ「骨格だけ」ではない場合）
+    const bgImg = (mode === 'view' && displayMode !== 'skeleton') ? remoteImageRef.current : null
+    
     drawPoseFrame(canvas, frame, {
       showLabels: mode === 'send',
-      emptyText: mode === 'send' ? 'MediaPipe で骨格を検出中...' : '送信 PC の骨格データを待機中',
+      backgroundImage: bgImg,
+      background: '#0b1220', // ダークブルー背景
+      emptyText: mode === 'send' ? 'MediaPipe で骨格を検出中...' : '送信 PC のデータを待機中',
     })
   }
 
@@ -156,7 +141,38 @@ function App() {
         body: JSON.stringify(frame),
       })
     } catch {
-      // best effort: viewer can still use the live WebRTC stream
+      // best effort
+    }
+  }
+
+  const uploadImageFrame = async (video: HTMLVideoElement) => {
+    if (!captureCanvasRef.current) {
+      captureCanvasRef.current = document.createElement('canvas')
+    }
+    const canvas = captureCanvasRef.current
+    const width = video.videoWidth || 640
+    const height = video.videoHeight || 360
+    
+    if (canvas.width !== width) canvas.width = width
+    if (canvas.height !== height) canvas.height = height
+
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+
+    ctx.drawImage(video, 0, 0, width, height)
+    const base64Image = canvas.toDataURL('image/jpeg', 0.5)
+
+    try {
+      await fetch(`${backendBase}/api/webrtc/image/update/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          room_id: roomId,
+          image: base64Image,
+        }),
+      })
+    } catch {
+      // best effort
     }
   }
 
@@ -164,19 +180,8 @@ function App() {
     abortRef.current = true
     clearPoseLoop()
 
-    const pc = peerConnectionRef.current
-    const sessionId = sessionIdRef.current
     const stream = localStreamRef.current
-
-    peerConnectionRef.current = null
-    sessionIdRef.current = null
     localStreamRef.current = null
-
-    if (pc) {
-      pc.ontrack = null
-      pc.onconnectionstatechange = null
-      pc.close()
-    }
 
     if (stream) {
       stream.getTracks().forEach((track) => track.stop())
@@ -185,23 +190,8 @@ function App() {
     if (localVideoRef.current) {
       localVideoRef.current.srcObject = null
     }
-    if (remoteVideoRef.current) {
-      remoteVideoRef.current.srcObject = null
-    }
 
     drawCurrentFrame(null)
-
-    if (sessionId) {
-      try {
-        await fetch(`${backendBase}/api/webrtc/close/`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ session_id: sessionId }),
-        })
-      } catch {
-        // best effort
-      }
-    }
 
     if (updateUi) {
       setStatus('idle')
@@ -263,6 +253,7 @@ function App() {
           setLocalPoseFrame(frame)
           drawCurrentFrame(frame)
           void uploadPoseFrame(frame)
+          void uploadImageFrame(video)
         } catch (err) {
           if (!abortRef.current) {
             console.error('Pose inference failed:', err)
@@ -272,7 +263,7 @@ function App() {
         }
       }
 
-      poseTimerRef.current = window.setTimeout(tick, 90)
+      poseTimerRef.current = window.setTimeout(tick, 120)
     }
 
     tick()
@@ -286,6 +277,7 @@ function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  // 画像と骨格データのGETポーリング
   useEffect(() => {
     if (mode !== 'view') {
       return
@@ -302,20 +294,42 @@ function App() {
       setViewerPollStatus((current) => (current === 'ready' ? 'ready' : 'polling'))
 
       try {
-        const response = await fetch(`${backendBase}/api/webrtc/pose/latest/?room_id=${encodeURIComponent(roomId)}`)
-        if (response.ok) {
-          const data = (await response.json()) as PoseLatestResponse
+        // 1. 骨格データ
+        const poseRes = await fetch(`${backendBase}/api/webrtc/pose/latest/?room_id=${encodeURIComponent(roomId)}`)
+        let freshFrame: PoseFrame | null = null
+        if (poseRes.ok) {
+          const data = (await poseRes.json()) as PoseLatestResponse
+          freshFrame = data.pose
           setLatestPoseFrame(data.pose)
           setViewerPollStatus('ready')
-          if (data.pose?.landmarks?.length) {
-            drawCurrentFrame(data.pose)
-          }
-        } else if (response.status === 404) {
+        } else if (poseRes.status === 404) {
           setLatestPoseFrame(null)
           setViewerPollStatus('waiting')
-          drawCurrentFrame(null)
         }
-      } catch {
+
+        // 2. 画像データ（骨格だけモード以外）
+        if (displayMode !== 'skeleton') {
+          const imgRes = await fetch(`${backendBase}/api/webrtc/image/latest/?room_id=${encodeURIComponent(roomId)}`)
+          if (imgRes.ok) {
+            const data = (await imgRes.json()) as ImageLatestResponse
+            
+            if (!remoteImageRef.current) {
+              remoteImageRef.current = new Image()
+            }
+            
+            remoteImageRef.current.onload = () => {
+              if (!cancelled) {
+                drawCurrentFrame(freshFrame || latestPoseFrame)
+              }
+            }
+            remoteImageRef.current.src = data.image
+          }
+        } else {
+          remoteImageRef.current = null
+          drawCurrentFrame(freshFrame || latestPoseFrame)
+        }
+
+      } catch (err) {
         if (!cancelled) {
           setViewerPollStatus('waiting')
         }
@@ -332,7 +346,7 @@ function App() {
         window.clearTimeout(timerId)
       }
     }
-  }, [mode, roomId])
+  }, [mode, roomId, displayMode])
 
   useEffect(() => {
     if (mode === 'send') {
@@ -368,53 +382,17 @@ function App() {
         localVideoRef.current.srcObject = stream
       }
 
-      const pc = new RTCPeerConnection()
-      peerConnectionRef.current = pc
-      const [track] = stream.getVideoTracks()
-      pc.addTrack(track, stream)
-
-      setStatus('negotiating')
-      setMessage('backend と接続しています。')
-
-      const offer = await pc.createOffer()
-      await pc.setLocalDescription(offer)
-      await waitForIceGatheringComplete(pc)
-
-      const response = await fetch(`${backendBase}/api/webrtc/offer/send/`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          room_id: roomId,
-          offer: pc.localDescription,
-        }),
-      })
-
-      if (!response.ok) {
-        throw new Error(await response.text())
-      }
-
-      const data = (await response.json()) as OfferResponse
-      sessionIdRef.current = data.session_id
-      await pc.setRemoteDescription(data.answer)
+      setStatus('streaming')
+      setMessage('送信中です。別 PC の /view で確認できます。')
 
       if (localVideoRef.current) {
         await startPoseAnalysis(localVideoRef.current, roomId)
-      }
-
-      pc.onconnectionstatechange = () => {
-        if (pc.connectionState === 'connected') {
-          setStatus('streaming')
-          setMessage('送信中です。別 PC の /view で確認できます。')
-        } else if (['failed', 'disconnected', 'closed'].includes(pc.connectionState)) {
-          setStatus('error')
-          setMessage(`接続状態: ${pc.connectionState}`)
-        }
       }
     } catch (err) {
       const messageText = err instanceof Error ? err.message : String(err)
       setError(messageText)
       setStatus('error')
-      setMessage('送信に失敗しました。')
+      setMessage('カメラの起動に失敗しました。')
       await stopAll(false)
     }
   }
@@ -422,76 +400,8 @@ function App() {
   const startView = async () => {
     abortRef.current = false
     setError(null)
-    setStatus('retrying')
-    setMessage('送信 PC の映像を待っています。')
-
-    let attempt = 0
-    while (!abortRef.current) {
-      attempt += 1
-      const pc = new RTCPeerConnection()
-      peerConnectionRef.current = pc
-      pc.addTransceiver('video', { direction: 'recvonly' })
-
-      pc.ontrack = (event) => {
-        const [stream] = event.streams
-        if (remoteVideoRef.current && stream) {
-          remoteVideoRef.current.srcObject = stream
-        }
-      }
-
-      try {
-        const offer = await pc.createOffer()
-        await pc.setLocalDescription(offer)
-        await waitForIceGatheringComplete(pc)
-
-        const response = await fetch(`${backendBase}/api/webrtc/offer/view/`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            room_id: roomId,
-            offer: pc.localDescription,
-          }),
-        })
-
-        if (response.status === 409) {
-          await pc.close()
-          peerConnectionRef.current = null
-          setStatus('retrying')
-          setMessage(`送信待ちです... (${attempt})`)
-          setViewerPollStatus('waiting')
-          await sleep(1500)
-          continue
-        }
-
-        if (!response.ok) {
-          throw new Error(await response.text())
-        }
-
-        const data = (await response.json()) as OfferResponse
-        sessionIdRef.current = data.session_id
-        await pc.setRemoteDescription(data.answer)
-
-        pc.onconnectionstatechange = () => {
-          if (pc.connectionState === 'connected') {
-            setStatus('streaming')
-            setMessage('視聴中です。')
-            setViewerPollStatus('ready')
-          } else if (['failed', 'disconnected', 'closed'].includes(pc.connectionState)) {
-            setStatus('error')
-            setMessage(`接続状態: ${pc.connectionState}`)
-          }
-        }
-
-        break
-      } catch (err) {
-        const messageText = err instanceof Error ? err.message : String(err)
-        setError(messageText)
-        setStatus('error')
-        setMessage('視聴に失敗しました。')
-        await stopAll(false)
-        await sleep(1500)
-      }
-    }
+    setStatus('streaming')
+    setMessage('視聴中です（HTTP中継方式）。')
   }
 
   const onStart = async () => {
@@ -515,7 +425,7 @@ function App() {
       : 'この画面は視聴専用です。送信 PC が先に起動していれば、映像と骨格データを受け取れます。'
 
   const streamStatusClass =
-    status === 'streaming' ? 'ok' : status === 'error' ? 'err' : status === 'retrying' ? 'warn' : ''
+    status === 'streaming' ? 'ok' : status === 'error' ? 'err' : ''
 
   const displayModeLabel =
     displayMode === 'video' ? '映像だけ' : displayMode === 'skeleton' ? '骨格だけ' : '同時表示'
@@ -525,7 +435,7 @@ function App() {
       <div className="shell">
         <section className="hero">
           <div className="badges">
-            <span className="badge">WebRTC LAN test</span>
+            <span className="badge">HTTP Relay test</span>
             <span className="badge">room: {roomId}</span>
             <span className="badge">mode: {pageTitle}</span>
             <span className="badge">pose: {displayModeLabel}</span>
@@ -545,7 +455,7 @@ function App() {
             <button
               className="primary"
               onClick={() => void onStart()}
-              disabled={status === 'requesting-camera' || status === 'negotiating'}
+              disabled={status === 'requesting-camera'}
             >
               Start
             </button>
@@ -580,17 +490,15 @@ function App() {
               ) : null}
             </div>
 
-            <div
-              className={`stage ${mode === 'view' && displayMode === 'video' ? 'videoOnly' : ''} ${
-                mode === 'view' && displayMode === 'skeleton' ? 'skeletonOnly' : ''
-              }`}
-            >
+            <div className="stage">
+              {/* 送信側のみカメラ確認用ビデオを表示 */}
               <video
-                ref={mode === 'send' ? localVideoRef : remoteVideoRef}
+                ref={localVideoRef}
                 autoPlay
                 playsInline
-                muted={mode === 'send'}
-                className={mode === 'view' && displayMode === 'skeleton' ? 'is-hidden' : ''}
+                muted
+                className={mode === 'view' ? 'is-hidden' : ''}
+                style={{ width: mode === 'view' ? 0 : '100%', height: mode === 'view' ? 0 : 'auto' }}
               />
               <canvas
                 ref={overlayCanvasRef}
@@ -599,8 +507,8 @@ function App() {
             </div>
             <p className="note">
               {mode === 'send'
-                ? '送信 PC のカメラ映像に MediaPipe の骨格を重ねて送信します。骨格データも backend に送っているので、別 PC では映像と骨格の両方を確認できます。'
-                : '視聴 PC では映像だけ・骨格だけ・同時表示を切り替えられます。骨格データは backend からポーリングして反映します。'}
+                ? '送信 PC のカメラ映像に MediaPipe の骨格を重ねて送信します。画像データも中継しているので、学内ネットワーク環境でも確実に見ることができます。'
+                : '視聴 PC では映像・骨格の表示を切り替えられます。データは中継サーバーから高速ポーリングして反映します。'}
             </p>
           </div>
 
@@ -637,7 +545,7 @@ function App() {
                   <br />
                   3. 別 PC で /view を開く
                   <br />
-                  4. 同じ room_id の映像と骨格を見る
+                  4. 自動的に中継された映像と骨格が同期します
                 </p>
                 <div className="poseStats">
                   <div className="poseStat">
@@ -645,7 +553,7 @@ function App() {
                     <span className="poseStatValue">{status}</span>
                   </div>
                   <div className="poseStat">
-                    <span className="poseStatLabel">骨格ポーリング</span>
+                    <span className="poseStatLabel">データ同期</span>
                     <span className="poseStatValue">{viewerPollStatus}</span>
                   </div>
                   <div className="poseStat">

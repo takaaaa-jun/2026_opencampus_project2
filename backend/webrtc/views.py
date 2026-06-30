@@ -119,6 +119,35 @@ def close(request):
     return JsonResponse({'ok': True})
 
 
+@csrf_exempt
+def image_update(request):
+    if request.method != 'POST':
+        return JsonResponse({'detail': 'Method not allowed.'}, status=405)
+
+    data = _parse_json(request)
+    if data is None:
+        return JsonResponse({'detail': 'Invalid JSON.'}, status=400)
+
+    room_id = data.get('room_id') or 'default'
+    image_data = data.get('image')  # base64 string
+    peer_manager.update_image(room_id, image_data)
+
+    return JsonResponse({'ok': True, 'room_id': room_id})
+
+
+def image_latest(request):
+    if request.method != 'GET':
+        return JsonResponse({'detail': 'Method not allowed.'}, status=405)
+
+    room_id = request.GET.get('room_id') or 'default'
+    image_data = peer_manager.get_latest_image(room_id)
+
+    if image_data is None:
+        return JsonResponse({'detail': 'Not found.'}, status=404)
+
+    return JsonResponse({'room_id': room_id, 'image': image_data})
+
+
 from django.shortcuts import render
 from django.views.decorators.clickjacking import xframe_options_exempt
 

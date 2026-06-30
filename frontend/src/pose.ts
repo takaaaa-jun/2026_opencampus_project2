@@ -119,6 +119,7 @@ export function drawPoseFrame(
   options?: {
     showLabels?: boolean
     background?: string
+    backgroundImage?: HTMLImageElement | null
     accentColor?: string
     pointColor?: string
     lineColor?: string
@@ -141,7 +142,11 @@ export function drawPoseFrame(
   }
 
   ctx.clearRect(0, 0, width, height)
-  if (options?.background) {
+
+  // 背景画像の描画
+  if (options?.backgroundImage) {
+    ctx.drawImage(options.backgroundImage, 0, 0, width, height)
+  } else if (options?.background) {
     ctx.fillStyle = options.background
     ctx.fillRect(0, 0, width, height)
   }

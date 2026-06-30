@@ -19,6 +19,7 @@ class SessionState:
 class RoomState:
     sender_track: Any | None = None
     latest_pose: dict[str, Any] | None = None
+    latest_image: str | None = None  # Base64画像データを保持
     sessions: dict[str, SessionState] = field(default_factory=dict)
 
 
@@ -138,6 +139,16 @@ class PeerManager:
         if room is None:
             return None
         return room.latest_pose
+
+    def update_image(self, room_id: str, image_data: str | None):
+        room = self._get_room(room_id)
+        room.latest_image = image_data
+
+    def get_latest_image(self, room_id: str):
+        room = self._rooms.get(room_id)
+        if room is None:
+            return None
+        return room.latest_image
 
 
 peer_manager = PeerManager()
