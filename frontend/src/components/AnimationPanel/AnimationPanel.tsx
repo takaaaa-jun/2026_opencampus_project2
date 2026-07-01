@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { ManimScene } from 'manim-web/react'
+import type { Scene } from 'manim-web'
 import type { ManimSceneDefinition } from '../../features/manim/types'
 import './AnimationPanel.css'
 
@@ -12,10 +13,10 @@ interface AnimationPanelProps {
 export function AnimationPanel({ scenes, activeSceneId, onSceneChange }: AnimationPanelProps) {
   const stageRef = useRef<HTMLDivElement | null>(null)
   const [stageSize, setStageSize] = useState({ width: 640, height: 512 })
-  const [loopEpoch, setLoopEpoch] = useState(0)
-  const renderRunIdRef = useRef(0)
-  const activeSceneIdRef = useRef(activeSceneId)
+  const sceneRef = useRef<Scene | null>(null)
+  const loopTokenRef = useRef(0)
   const activeScene = scenes.find((scene) => scene.id === activeSceneId) ?? scenes[0]
+  const activeSceneKey = activeScene?.id ?? ''
 
   useEffect(() => {
     const stageElement = stageRef.current
@@ -41,9 +42,11 @@ export function AnimationPanel({ scenes, activeSceneId, onSceneChange }: Animati
   }, [])
 
   useEffect(() => {
-    renderRunIdRef.current += 1
-    activeSceneIdRef.current = activeScene.id
-  }, [activeScene.id])
+    return () => {
+      loopTokenRef.current += 1
+      sceneRef.current = null
+    }
+  }, [activeSceneKey])
 
   if (!activeScene) {
     return null
@@ -74,21 +77,31 @@ export function AnimationPanel({ scenes, activeSceneId, onSceneChange }: Animati
 
       <div className="animation-stage" ref={stageRef}>
         <ManimScene
-          key={`${activeScene.id}-${loopEpoch}`}
+          key={activeSceneKey}
           width={stageSize.width}
           height={stageSize.height}
           onSceneReady={(scene) => {
-            const runId = renderRunIdRef.current
-            const sceneId = activeScene.id
+            sceneRef.current = scene
+            const loopToken = loopTokenRef.current
 
             void (async () => {
-              await activeScene.construct(scene)
+              try {
+                while (loopTokenRef.current === loopToken) {
+                  await activeScene.construct(scene)
 
-              if (renderRunIdRef.current !== runId || activeSceneIdRef.current !== sceneId) {
-                return
+                  if (loopTokenRef.current !== loopToken) {
+                    break
+                  }
+
+                  scene.stop()
+                  scene.clear({ render: false })
+                  await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
+                }
+              } catch (error) {
+                if (loopTokenRef.current === loopToken) {
+                  console.error('AnimationPanel scene loop failed', error)
+                }
               }
-
-              setLoopEpoch((current) => current + 1)
             })()
           }}
         />
