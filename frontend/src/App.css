@@ -70,29 +70,6 @@
   color: #6b7280;
 }
 
-.control-field {
-  display: grid;
-  gap: 8px;
-  color: #2b3140;
-}
-
-.control-field span {
-  font-size: 13px;
-  font-weight: 600;
-  color: #374151;
-}
-
-.control-field input[type='range'] {
-  width: 100%;
-  accent-color: #111827;
-}
-
-.panel-note {
-  margin: 2px 0 0;
-  font-size: 13px;
-  color: #6b7280;
-}
-
 @media (max-width: 900px) {
   .app-shell {
     padding: 20px 16px 18px;

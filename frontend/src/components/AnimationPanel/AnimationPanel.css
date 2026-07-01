@@ -1,0 +1,72 @@
+.animation-panel {
+  display: grid;
+  gap: 16px;
+}
+
+.animation-panel__header {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: end;
+}
+
+.animation-panel__header h2 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #374151;
+}
+
+.animation-panel__header p {
+  margin: 6px 0 0;
+  color: #6b7280;
+  font-size: 13px;
+  max-width: 34ch;
+}
+
+.scene-switcher {
+  display: grid;
+  gap: 8px;
+  min-width: 180px;
+  justify-items: start;
+}
+
+.scene-switcher span {
+  font-size: 13px;
+  font-weight: 600;
+  color: #374151;
+}
+
+.scene-switcher select {
+  width: 100%;
+  min-height: 40px;
+  border-radius: 12px;
+  border: 1px solid rgba(17, 24, 39, 0.12);
+  background: #ffffff;
+  color: #111827;
+  padding: 0 12px;
+}
+
+.animation-stage {
+  min-height: 390px;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  border-radius: 18px;
+  border: 1px solid rgba(17, 24, 39, 0.08);
+  background: linear-gradient(180deg, #ffffff 0%, #f9fafb 100%);
+  overflow: hidden;
+}
+
+@media (max-width: 900px) {
+  .animation-panel__header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .scene-switcher {
+    min-width: 0;
+  }
+}
