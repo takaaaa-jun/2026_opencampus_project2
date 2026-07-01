@@ -18,33 +18,38 @@ export function AnimationPanel({ scenes, activeSceneId, onSceneChange }: Animati
   return (
     <section className="panel animation-panel">
       <div className="animation-panel__header">
-        <div>
-          <h2>Process Animation</h2>
-          <p>{activeScene.description}</p>
-        </div>
+        <div className="scene-tabs" role="tablist" aria-label="Animation scenes">
+          {scenes.map((scene) => {
+            const isActive = scene.id === activeScene.id
 
-        <label className="scene-switcher">
-          <span>Scene</span>
-          <select value={activeScene.id} onChange={(event) => onSceneChange(event.target.value)}>
-            {scenes.map((scene) => (
-              <option key={scene.id} value={scene.id}>
+            return (
+              <button
+                key={scene.id}
+                type="button"
+                role="tab"
+                aria-selected={isActive}
+                className={`scene-tab${isActive ? ' is-active' : ''}`}
+                onClick={() => onSceneChange(scene.id)}
+              >
                 {scene.title}
-              </option>
-            ))}
-          </select>
-        </label>
+              </button>
+            )
+          })}
+        </div>
       </div>
 
       <div className="animation-stage">
         <ManimScene
           key={activeScene.id}
-          width={640}
-          height={360}
+          width={760}
+          height={428}
           onSceneReady={(scene) => {
             void activeScene.construct(scene)
           }}
         />
       </div>
+
+      <p className="animation-panel__description">{activeScene.description}</p>
     </section>
   )
 }

@@ -4,69 +4,61 @@
 }
 
 .animation-panel__header {
+  display: block;
+}
+
+.scene-tabs {
   display: flex;
-  justify-content: space-between;
-  gap: 16px;
-  align-items: end;
+  flex-wrap: wrap;
+  gap: 10px;
 }
 
-.animation-panel__header h2 {
-  margin: 0;
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: #374151;
-}
-
-.animation-panel__header p {
-  margin: 6px 0 0;
-  color: #6b7280;
-  font-size: 13px;
-  max-width: 34ch;
-}
-
-.scene-switcher {
-  display: grid;
-  gap: 8px;
-  min-width: 180px;
-  justify-items: start;
-}
-
-.scene-switcher span {
-  font-size: 13px;
-  font-weight: 600;
-  color: #374151;
-}
-
-.scene-switcher select {
-  width: 100%;
+.scene-tab {
   min-height: 40px;
-  border-radius: 12px;
+  border-radius: 999px;
   border: 1px solid rgba(17, 24, 39, 0.12);
-  background: #ffffff;
-  color: #111827;
-  padding: 0 12px;
+  background: rgba(255, 255, 255, 0.82);
+  color: #374151;
+  padding: 0 14px;
+  cursor: pointer;
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease,
+    transform 160ms ease;
+}
+
+.scene-tab:hover {
+  border-color: rgba(17, 24, 39, 0.22);
+  transform: translateY(-1px);
+}
+
+.scene-tab.is-active {
+  background: #111827;
+  border-color: #111827;
+  color: #ffffff;
 }
 
 .animation-stage {
   min-height: 390px;
   display: grid;
   place-items: center;
-  padding: 18px;
+  padding: 0;
   border-radius: 18px;
   border: 1px solid rgba(17, 24, 39, 0.08);
-  background: linear-gradient(180deg, #ffffff 0%, #f9fafb 100%);
+  background: #111827;
   overflow: hidden;
 }
 
-@media (max-width: 900px) {
-  .animation-panel__header {
-    flex-direction: column;
-    align-items: stretch;
-  }
+.animation-panel__description {
+  margin: 0;
+  color: #6b7280;
+  font-size: 13px;
+  max-width: 48ch;
+}
 
-  .scene-switcher {
-    min-width: 0;
+@media (max-width: 900px) {
+  .scene-tabs {
+    gap: 8px;
   }
 }
