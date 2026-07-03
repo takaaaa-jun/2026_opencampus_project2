@@ -106,13 +106,28 @@ export function VideoPanel() {
 
   // サーバーのAPIエンドポイントベースURLを設定
   const backendBase = useMemo(() => {
-    const host = window.location.hostname
+    // 1. URLクエリパラメータがある場合は最優先（手動指定用）
     const urlParams = new URLSearchParams(window.location.search)
-    const serverIp = urlParams.get('server_ip') || host
-    const serverPort = urlParams.get('server_port') || '5173'
-    const serverPath = urlParams.get('server_path') || ''
-    const pathPrefix = serverPath ? `/${serverPath.replace(/^\/+|\/+$/g, '')}` : ''
-    return `http://${serverIp}:${serverPort}${pathPrefix}`
+    const queryIp = urlParams.get('server_ip')
+    const queryPort = urlParams.get('server_port')
+    const queryPath = urlParams.get('server_path')
+
+    if (queryIp || queryPort || queryPath) {
+      const ip = queryIp || window.location.hostname
+      const port = queryPort || (window.location.port ? window.location.port : '80')
+      const pathPrefix = queryPath ? `/${queryPath.replace(/^\/+|\/+$/g, '')}` : ''
+      return `http://${ip}:${port}${pathPrefix}`
+    }
+
+    // 2. クエリパラメータがない場合は、現在のアドレスから自動判定
+    const protocol = window.location.protocol // "http:" or "https:"
+    const host = window.location.hostname
+    const port = window.location.port ? `:${window.location.port}` : ''
+    const pathPrefix = window.location.pathname.includes('/2026_opencampus_project2')
+      ? '/2026_opencampus_project2'
+      : ''
+
+    return `${protocol}//${host}${port}${pathPrefix}`
   }, [])
 
   const clearPoseLoop = () => {
