@@ -105,4 +105,4 @@ if ENV_FILE.exists():
                 key, val = line.split('=', 1)
                 os.environ[key.strip()] = val.strip()
 
-OPENCAMPUS_PASSWORD = os.environ.get('OPENCAMPUS_PASSWORD', 'opencampus2026')
+OPENCAMPUS_PASSWORD = os.environ.get('OPENCAMPUS_PASSWORD')

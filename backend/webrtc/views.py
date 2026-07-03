@@ -108,7 +108,7 @@ def auth_verify(request):
         return JsonResponse({'detail': 'Invalid JSON.'}, status=400)
 
     password = data.get('password')
-    correct_password = getattr(settings, 'OPENCAMPUS_PASSWORD', 'opencampus2026')
+    correct_password = getattr(settings, 'OPENCAMPUS_PASSWORD', None)
 
     if password == correct_password:
         return JsonResponse({'ok': True})
