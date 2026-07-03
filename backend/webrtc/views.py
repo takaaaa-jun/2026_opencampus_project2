@@ -3,6 +3,7 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.shortcuts import render
 from django.views.decorators.clickjacking import xframe_options_exempt
+from django.conf import settings
 
 from .services import relay_service
 
@@ -95,3 +96,21 @@ def image_latest(request):
 @xframe_options_exempt
 def index_view(request):
     return render(request, 'index.html')
+
+
+@csrf_exempt
+def auth_verify(request):
+    if request.method != 'POST':
+        return JsonResponse({'detail': 'Method not allowed.'}, status=405)
+
+    data = _parse_json(request)
+    if data is None:
+        return JsonResponse({'detail': 'Invalid JSON.'}, status=400)
+
+    password = data.get('password')
+    correct_password = getattr(settings, 'OPENCAMPUS_PASSWORD', 'opencampus2026')
+
+    if password == correct_password:
+        return JsonResponse({'ok': True})
+    else:
+        return JsonResponse({'ok': False, 'detail': 'Incorrect password.'}, status=401)

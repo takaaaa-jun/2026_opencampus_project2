@@ -94,3 +94,15 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_CREDENTIALS = True
+
+# .env ファイルの手動読み込み（追加ライブラリ不要）
+ENV_FILE = BASE_DIR / '.env'
+if ENV_FILE.exists():
+    with open(ENV_FILE, 'r', encoding='utf-8') as f:
+        for line in f:
+            line = line.strip()
+            if '=' in line and not line.startswith('#'):
+                key, val = line.split('=', 1)
+                os.environ[key.strip()] = val.strip()
+
+OPENCAMPUS_PASSWORD = os.environ.get('OPENCAMPUS_PASSWORD', 'opencampus2026')
