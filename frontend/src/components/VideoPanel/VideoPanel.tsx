@@ -314,7 +314,7 @@ export function VideoPanel() {
 
   // 画像と骨格データのGETポーリング
   useEffect(() => {
-    if (mode !== 'view') {
+    if (mode !== 'view' || status !== 'streaming') {
       return
     }
 
@@ -381,7 +381,7 @@ export function VideoPanel() {
         window.clearTimeout(timerId)
       }
     }
-  }, [mode, roomId, displayMode])
+  }, [mode, roomId, displayMode, status])
 
   useEffect(() => {
     if (mode === 'send') {
