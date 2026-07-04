@@ -1,0 +1,9 @@
+{
+  "name": "2026_opencampus_project2",
+  "dockerComposeFile": "docker-compose.yml",
+  "service": "frontend",
+  "workspaceFolder": "/app/frontend",
+  "runServices": ["backend", "frontend"],
+  "shutdownAction": "stopCompose",
+  "init": true,
+}

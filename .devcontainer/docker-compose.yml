@@ -1,0 +1,29 @@
+services:
+  frontend:
+    image: node:22-bookworm-slim
+    working_dir: /app/frontend
+    volumes:
+      - ..:/app
+    ports:
+      - "5173:5173"
+    tty: true
+    restart: unless-stopped
+  backend:
+    image: python:3.12-slim-bookworm
+    working_dir: /app/backend
+    volumes:
+      - ..:/app
+    ports:
+      - "8000:8000"
+    environment:
+      DJANGO_DEBUG: "1"
+    tty: true
+    restart: unless-stopped
+    command: >
+      bash -c "
+      if [ -f requirements.txt ]; then
+        pip install -r requirements.txt;
+      fi &&
+      python manage.py migrate &&
+      python manage.py runserver 0.0.0.0:8000
+      "
