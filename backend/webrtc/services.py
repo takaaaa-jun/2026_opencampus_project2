@@ -30,5 +30,11 @@ class RelayService:
     def get_latest_image(self, room_id: str) -> Optional[ImageFrame]:
         return self._repo.get_image(room_id)
 
+    def update_action_data(self, room_id: str, action_data: Any) -> None:
+        self._repo.save_action_data(room_id, action_data)
+
+    def get_latest_action_data(self, room_id: str) -> Optional[Any]:
+        return self._repo.get_action_data(room_id)
+
 # シングルトンインスタンスとして公開
 relay_service = RelayService()

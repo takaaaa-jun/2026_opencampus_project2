@@ -114,3 +114,17 @@ def auth_verify(request):
         return JsonResponse({'ok': True})
     else:
         return JsonResponse({'ok': False, 'detail': 'Incorrect password.'}, status=401)
+
+
+@csrf_exempt
+def receive_data(request):
+    if request.method != 'POST':
+        return JsonResponse({'detail': 'Method not allowed.'}, status=405)
+
+    data = _parse_json(request)
+    if data is None:
+        return JsonResponse({'detail': 'Invalid JSON.'}, status=400)
+
+    print("Received custom action data:", data)
+
+    return JsonResponse({'ok': True, 'message': 'Data received successfully.'})

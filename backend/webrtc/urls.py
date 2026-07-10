@@ -8,4 +8,5 @@ urlpatterns = [
     path('image/update/', views.image_update, name='image_update'),
     path('image/latest/', views.image_latest, name='image_latest'),
     path('auth/verify/', views.auth_verify, name='auth_verify'),
+    path('receive/', views.receive_data, name='receive_data'),
 ]
