@@ -1,19 +1,21 @@
+import type { DetectionData } from '../../features/detection/types';
 import type { MotionKey } from './MotionTabs';
-import { ClapExplanation } from './explanations/ClapExplanation';
-import { PlaceholderExplanation } from './explanations/PlaceholderExplanation';
+import { Clap } from './details/Clap';
+import { PlaceholderDetails } from './details/PlaceholderDetails';
 
 type Props = {
   motion: MotionKey;
+  latestDetection: DetectionData | null;
 };
 
-export const ExplanationDetails = ({ motion }: Props) => {
+export const ExplanationDetails = ({ motion, latestDetection }: Props) => {
   switch (motion) {
     case 'clap':
-      return <ClapExplanation />;
+      return <Clap latestDetection={latestDetection} />;
     case 'next':
-      return <PlaceholderExplanation title="次の動き" />;
+      return <PlaceholderDetails title="次の動き" />;
     case 'extra':
-      return <PlaceholderExplanation title="さらに追加" />;
+      return <PlaceholderDetails title="さらに追加" />;
     default:
       return null;
   }

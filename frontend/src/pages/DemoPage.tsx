@@ -30,8 +30,9 @@ export default function DemoPage() {
   );
 
   const clap = detection?.actions.clap;
-  const distance = clap?.metrics?.middleFingertipDistance ?? null;
-  const threshold = clap?.metrics?.threshold ?? 90;
+  const liveClap = localDetection?.actions.clap ?? clap;
+  const distance = liveClap?.metrics?.middleFingertipDistance ?? null;
+  const threshold = liveClap?.metrics?.threshold ?? clap?.metrics?.threshold ?? 90;
   const maxDistance = Math.max(threshold * 2.2, 260);
 
   const statusText = cameraActive

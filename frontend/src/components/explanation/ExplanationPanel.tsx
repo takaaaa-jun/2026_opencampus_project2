@@ -10,8 +10,6 @@ type Props = {
 };
 
 export const ExplanationPanel = ({ motion, onMotionChange, latestDetection }: Props) => {
-  const clap = latestDetection?.actions.clap;
-
   return (
     <aside className="panel panel--explanation">
       <header className="panel__header panel__header--compact">
@@ -22,26 +20,7 @@ export const ExplanationPanel = ({ motion, onMotionChange, latestDetection }: Pr
       </header>
 
       <ExplanationSelector motion={motion} onChange={onMotionChange} />
-      <ExplanationDetails motion={motion} />
-
-      <div className="mini-metrics">
-        <div>
-          <span>現在の判定</span>
-          <strong>{clap?.active ? 'CLAP' : 'OPEN'}</strong>
-        </div>
-        <div>
-          <span>発火</span>
-          <strong>{clap?.triggered ? 'YES' : 'NO'}</strong>
-        </div>
-        <div>
-          <span>取得元</span>
-          <strong>{latestDetection?.source?.toUpperCase() ?? '—'}</strong>
-        </div>
-        <div>
-          <span>距離</span>
-          <strong>{clap?.metrics?.middleFingertipDistance ? `${clap.metrics.middleFingertipDistance.toFixed(1)} px` : '—'}</strong>
-        </div>
-      </div>
+      <ExplanationDetails motion={motion} latestDetection={latestDetection} />
     </aside>
   );
 };
