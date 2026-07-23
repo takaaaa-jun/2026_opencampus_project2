@@ -1,38 +1,27 @@
-interface OfferResponse {
-  sdp: string
-  type: RTCSdpType
-  sessionId: string
-}
+type OfferResponse = {
+  sdp: string;
+  type: RTCSdpType;
+  session_id: string;
+};
 
-const baseUrl = (import.meta.env.VITE_SIGNALING_BASE_URL ?? '').replace(/\/$/, '')
+const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? '';
 
-async function parseError(response: Response): Promise<string> {
-  try {
-    const payload = (await response.json()) as { error?: string; detail?: string }
-    return payload.error ?? payload.detail ?? `HTTP ${response.status}`
-  } catch {
-    return `HTTP ${response.status}`
-  }
-}
-
-export async function exchangeOffer(description: RTCSessionDescriptionInit): Promise<OfferResponse> {
-  const response = await fetch(`${baseUrl}/api/webrtc/offer/`, {
+export const requestOfferAnswer = async (offer: RTCSessionDescriptionInit) => {
+  const response = await fetch(`${apiBaseUrl}/api/webrtc/offer/`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(description),
-  })
-  if (!response.ok) {
-    throw new Error(await parseError(response))
-  }
-  return (await response.json()) as OfferResponse
-}
+    body: JSON.stringify(offer),
+  });
 
-export async function closeRemoteSession(sessionId: string): Promise<void> {
-  const response = await fetch(`${baseUrl}/api/webrtc/sessions/${sessionId}/close/`, {
-    method: 'POST',
-    keepalive: true,
-  })
   if (!response.ok) {
-    throw new Error(await parseError(response))
+    throw new Error(`failed to negotiate WebRTC: ${response.status}`);
   }
-}
+
+  return (await response.json()) as OfferResponse;
+};
+
+export const closeSession = async (sessionId: string) => {
+  await fetch(`${apiBaseUrl}/api/webrtc/sessions/${sessionId}/close/`, {
+    method: 'POST',
+  }).catch(() => undefined);
+};

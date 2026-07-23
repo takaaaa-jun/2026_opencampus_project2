@@ -1,44 +1,38 @@
-export type ActionId = 'jump' | 'sit' | 'tpose' | 'clap' | 'grab'
+export type Landmark = {
+  x: number;
+  y: number;
+  z?: number;
+  visibility?: number;
+};
 
-export interface Landmark {
-  x: number
-  y: number
-  z: number
-  visibility?: number
-  presence?: number
-}
+export type HandLandmarks = Landmark[];
+export type PoseLandmarks = Landmark[];
 
-export interface PoseDetection {
-  landmarks: Landmark[]
-}
+export type DetectionAction = {
+  active: boolean;
+  triggered: boolean;
+  confidence?: number;
+  metrics?: Record<string, number | null>;
+};
 
-export interface HandDetection {
-  handedness: 'left' | 'right' | 'unknown' | string
-  landmarks: Landmark[]
-}
-
-export interface ActionState {
-  active: boolean
-  triggered: boolean
-  confidence: number
-  metrics: Record<string, unknown>
-}
-
-export interface DetectionMessage {
-  type: 'detection'
-  schemaVersion: 1
+export type DetectionData = {
+  schemaVersion: number;
+  source: 'backend' | 'local';
   frame: {
-    id: number
-    receivedAtMs: number
-    processedAtMs: number
-    processingTimeMs: number
-    width: number
-    height: number
-    mirrored: boolean
-  }
-  pose: PoseDetection | null
-  hands: HandDetection[]
-  actions: Record<ActionId, ActionState>
-}
-
-export const ACTION_IDS: ActionId[] = ['clap', 'tpose', 'sit', 'jump', 'grab']
+    id: number;
+    capturedAtMs?: number;
+    receivedAtMs?: number;
+    processedAtMs: number;
+    width: number;
+    height: number;
+    mirrored: boolean;
+  };
+  pose: {
+    landmarks: PoseLandmarks;
+  } | null;
+  hands: Array<{
+    handedness?: string;
+    landmarks: HandLandmarks;
+  }>;
+  actions: Record<string, DetectionAction>;
+};

@@ -1,36 +1,30 @@
-import type { ActionId } from '../../features/detection/types'
+export type MotionKey = 'clap' | 'next' | 'extra';
 
-interface MotionTabsProps {
-  selected: ActionId
-  onSelect: (action: ActionId) => void
-}
+type Props = {
+  value: MotionKey;
+  onChange: (value: MotionKey) => void;
+};
 
-const ITEMS: Array<{ id: ActionId; label: string; subtitle: string }> = [
-  { id: 'clap', label: '拍手', subtitle: '距離の変化を見る' },
-  { id: 'tpose', label: 'Tポーズ', subtitle: '腕の広がりを見る' },
-  { id: 'sit', label: '着席', subtitle: '膝の曲がりを見る' },
-  { id: 'jump', label: 'ジャンプ', subtitle: '高さの変化を見る' },
-  { id: 'grab', label: '握る', subtitle: '指の縮みを見る' },
-]
+const items: Array<{ key: MotionKey; label: string; hint: string }> = [
+  { key: 'clap', label: '拍手', hint: '現在のデモ' },
+  { key: 'next', label: '次の動き', hint: '追加予定' },
+  { key: 'extra', label: 'さらに追加', hint: '拡張用' },
+];
 
-export function MotionTabs({ selected, onSelect }: MotionTabsProps) {
-  return (
-    <nav className="motion-tabs" aria-label="動作の切り替え">
-      {ITEMS.map((item) => (
-        <button
-          key={item.id}
-          type="button"
-          className={selected === item.id ? 'motion-tab selected' : 'motion-tab'}
-          onClick={() => onSelect(item.id)}
-        >
-          <span className="motion-tab-label">{item.label}</span>
-          <span className="motion-tab-subtitle">{item.subtitle}</span>
-        </button>
-      ))}
-      <button type="button" className="motion-tab add" disabled>
-        <span className="motion-tab-label">＋ 追加予定</span>
-        <span className="motion-tab-subtitle">このあと増やせます</span>
+export const MotionTabs = ({ value, onChange }: Props) => (
+  <div className="motion-tabs" role="tablist" aria-label="motion tabs">
+    {items.map((item) => (
+      <button
+        key={item.key}
+        type="button"
+        role="tab"
+        aria-selected={value === item.key}
+        className={value === item.key ? 'motion-tab motion-tab--active' : 'motion-tab'}
+        onClick={() => onChange(item.key)}
+      >
+        <span>{item.label}</span>
+        <small>{item.hint}</small>
       </button>
-    </nav>
-  )
-}
+    ))}
+  </div>
+);
