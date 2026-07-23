@@ -1,1 +1,127 @@
-/* たたく動作の解説専用スタイル */
+.clap-explanation {
+  display: grid;
+  gap: 20px;
+}
+
+.clap-explanation__lead {
+  margin: 0;
+  color: #334155;
+  font-weight: 700;
+}
+
+.clap-explanation__visualization {
+  display: grid;
+  min-height: 340px;
+  place-items: center;
+  border: 1px solid #cbd5e1;
+  background: #f8fafc;
+  overflow: hidden;
+}
+
+.clap-explanation__visualization svg {
+  width: 100%;
+  height: 340px;
+}
+
+.clap-explanation__hand-line {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.clap-explanation__hand-point {
+  opacity: 0.8;
+}
+
+.clap-explanation__target-point {
+  stroke: #ffffff;
+  stroke-width: 0.006;
+}
+
+.clap-explanation__distance-line {
+  stroke: #64748b;
+  stroke-dasharray: 0.018 0.012;
+}
+
+.clap-explanation__distance-line.is-close {
+  stroke: #16a34a;
+}
+
+.clap-explanation__landmark-label {
+  fill: #0f172a;
+  stroke-linejoin: round;
+  font-weight: 700;
+  text-anchor: middle;
+}
+
+.clap-explanation__waiting {
+  margin: 0;
+  color: #475569;
+  font-weight: 700;
+}
+
+.clap-explanation__metrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.clap-explanation__metrics div {
+  display: grid;
+  gap: 4px;
+}
+
+.clap-explanation__metrics span {
+  color: #64748b;
+  font-size: 0.875rem;
+}
+
+.clap-explanation__metrics strong {
+  color: #0f172a;
+  font-size: 1.25rem;
+}
+
+.clap-explanation__condition {
+  display: grid;
+  gap: 8px;
+}
+
+.clap-explanation__condition-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  color: #334155;
+}
+
+.clap-explanation__condition-header strong {
+  color: #475569;
+}
+
+.clap-explanation__condition-header strong.is-clapping {
+  color: #15803d;
+}
+
+.clap-explanation__bar {
+  height: 12px;
+  background: #e2e8f0;
+  overflow: hidden;
+}
+
+.clap-explanation__bar span {
+  display: block;
+  height: 100%;
+  background: #64748b;
+  transition: width 120ms linear, background 120ms linear;
+}
+
+.clap-explanation__bar span.is-close {
+  background: #22c55e;
+}
+
+@media (max-width: 800px) {
+  .clap-explanation__visualization,
+  .clap-explanation__visualization svg {
+    min-height: 260px;
+    height: 260px;
+  }
+}

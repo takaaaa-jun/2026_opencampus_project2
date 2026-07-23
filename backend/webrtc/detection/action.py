@@ -285,8 +285,8 @@ class action() :
     def judge_crap(self, hand1, hand2):
 
         hand_distance = self.distance(
-            hand1.landmark[13],
-            hand2.landmark[13]
+            hand1.landmark[12],
+            hand2.landmark[12]
         )
 
         # しきい値

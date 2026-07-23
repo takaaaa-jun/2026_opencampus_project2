@@ -4,6 +4,12 @@ from __future__ import annotations
 
 from .action import action
 
+CLAP_THRESHOLD = 0.05
+
+
+def _serialize_hand_landmark(landmark) -> dict[str, float]:
+    return {"x": landmark.x, "y": landmark.y, "z": landmark.z}
+
 
 class ActionEvaluator:
     """既存の判定ロジックを、送信用の動作名へ対応づける。"""
@@ -43,12 +49,29 @@ class ActionEvaluator:
             right_upper = self._action.judge_upper(landmarks[16].y, landmarks[12].y)
             actions["upper"] = bool(left_upper or right_upper)
 
-        if hands_results.multi_hand_landmarks:
-            hands = hands_results.multi_hand_landmarks
+        hands = hands_results.multi_hand_landmarks or []
+        clap_details = {
+            "handCount": len(hands),
+            "hand1Landmark12": None,
+            "hand2Landmark12": None,
+            "distance": None,
+            "threshold": CLAP_THRESHOLD,
+            "isWithinThreshold": False,
+        }
+
+        if hands:
             actions["grab"] = any(self._action.judge_grab(hand) for hand in hands)
             if len(hands) == 2:
+                hand1_landmark12 = hands[0].landmark[12]
+                hand2_landmark12 = hands[1].landmark[12]
+                clap_details["hand1Landmark12"] = _serialize_hand_landmark(hand1_landmark12)
+                clap_details["hand2Landmark12"] = _serialize_hand_landmark(hand2_landmark12)
+                clap_details["distance"] = self._action.distance(hand1_landmark12, hand2_landmark12)
                 actions["clap"] = self._action.judge_crap(hands[0], hands[1])
+                clap_details["isWithinThreshold"] = actions["clap"]
                 actions["kamehameha"] = bool(self._action.is_kamehameha(hands[0], hands[1]))
                 actions["kamehameha_continue"] = self._action.judge_kamehameha(hands[0], hands[1])
 
-        return actions, {action_id: {} for action_id in actions}
+        action_details = {action_id: {} for action_id in actions}
+        action_details["clap"] = clap_details
+        return actions, action_details

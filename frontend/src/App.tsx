@@ -6,18 +6,12 @@ import type { DetectionData } from './types/detection'
 import './App.css'
 
 const actionLabels: Record<string, string> = {
-  jump: 'ジャンプ',
-  sit: '座る',
   tpose: '十字架',
-  surprise: '驚かし',
-  kick: 'キック',
   upper: 'アッパー',
   swing: 'ふりおろし',
   closs: 'ウルトラマン',
   clap: 'たたく',
-  grab: '掴む',
   kamehameha: 'かめはめ波',
-  kamehameha_continue: 'かめはめ波（継続）',
 }
 
 function getDetectedActionLabel(detectionData: DetectionData | null): string | null {
