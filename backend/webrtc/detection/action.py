@@ -410,8 +410,9 @@ class action() :
         if len(self.wrist_y) < 10:
             return False
         
-        start = sum(list(self.wrist_y[0:3])) / 3
-        end = sum(list(self.wrist_y[-3:])) / 3
+        wrist_y_history = list(self.wrist_y)
+        start = sum(wrist_y_history[:3]) / 3
+        end = sum(wrist_y_history[-3:]) / 3
 
         dy = start - end
 
