@@ -34,18 +34,32 @@
     "jump": false,
     "sit": false,
     "tpose": false,
+    "surprise": false,
+    "kick": false,
+    "upper": false,
+    "swing": false,
+    "closs": false,
     "clap": true,
-    "grab": false
+    "grab": false,
+    "kamehameha": false,
+    "kamehameha_continue": false
   },
   "actionDetails": {
     "jump": {},
     "sit": {},
     "tpose": {},
+    "surprise": {},
+    "kick": {},
+    "upper": {},
+    "swing": {},
+    "closs": {},
     "clap": {
       "middleFingertipDistance": 0.06,
       "threshold": 0.1
     },
-    "grab": {}
+    "grab": {},
+    "kamehameha": {},
+    "kamehameha_continue": {}
   }
 }
 ```

@@ -63,6 +63,10 @@ sequenceDiagram
 
 バックエンドは新しいOfferを受信した場合、既存の接続を閉じてから新しい`RTCPeerConnection`を作成する。同時接続は1つだけ保持する。
 
+#### `POST /api/webrtc/close`
+
+フロントエンドのカメラ停止操作で呼び出す。バックエンドは現在の`RTCPeerConnection`、映像トラック、カメラ処理ループを閉じ、カメラを解放する。
+
 ## 3. 映像トラック
 
 バックエンドは次の2本の映像トラックを追加する。
@@ -228,6 +232,8 @@ WebRTC通信はReactのカスタムHookである `useWebRTC` に実装する。`
 `useWebRTC` がWebRTC通信の全体を管理する。
 
 - Hookの開始時に`RTCPeerConnection`、映像Transceiver、`detection` DataChannelを作成する。
+- `startCamera()` が呼ばれたときに接続処理を開始する。Hookの作成時にはカメラを起動しない。
+- `stopCamera()` が呼ばれたときは、フロントエンドの接続を閉じ、`POST /api/webrtc/close` でバックエンドのカメラ処理も停止する。
 - Offerを作成し、`POST /api/webrtc/offer` を呼び出してAnswerを設定する。
 - `ontrack` で受信した映像ストリームを、カメラ映像用と骨格映像用にそれぞれ保持する。
 - DataChannelの`message`イベントで受信したJSONを、最新の検知データとして保持する。
