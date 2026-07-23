@@ -13,7 +13,7 @@ class SkeletonRenderer:
 
     def render(self, camera_frame: np.ndarray, pose_results, hands_results) -> np.ndarray:
         """カメラ映像を変更せず、骨格を重ねた別フレームを返す。"""
-        skeleton_frame = camera_frame.copy()
+        skeleton_frame = np.zeros_like(camera_frame)
 
         if pose_results.pose_landmarks:
             self._detector.drawing_utils.draw_landmarks(

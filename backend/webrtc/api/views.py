@@ -41,6 +41,16 @@ def offer(request):
     return JsonResponse({'type': answer.type, 'sdp': answer.sdp})
 
 
+@csrf_exempt
+def close(request):
+    """フロントエンドの停止操作に応じてWebRTC接続とカメラを閉じる。"""
+    if request.method != 'POST':
+        return JsonResponse({'detail': 'Method not allowed.'}, status=405)
+
+    rtc_session_manager.close()
+    return JsonResponse({'ok': True})
+
+
 @xframe_options_exempt
 def index_view(request):
     return render(request, 'index.html')
