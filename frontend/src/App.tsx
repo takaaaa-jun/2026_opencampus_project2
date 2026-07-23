@@ -1,28 +1,40 @@
-import { useState } from 'react'
-import { AnimationPanel } from './components/AnimationPanel/AnimationPanel'
-import { VideoPanel } from './components/VideoPanel/VideoPanel'
-import { manimScenes } from './features/manim/sceneRegistry'
-import { AuthGuard } from './components/Auth/AuthGuard'
+import { useEffect, useRef } from 'react'
+import { useWebRTC } from './hooks/useWebRTC'
 import './App.css'
 
 function App() {
-  const [activeSceneId, setActiveSceneId] = useState(manimScenes[0]?.id ?? '')
+  const { cameraStream, connectionState, error, reconnect } = useWebRTC()
+  const cameraVideoRef = useRef<HTMLVideoElement | null>(null)
+
+  useEffect(() => {
+    if (cameraVideoRef.current) {
+      cameraVideoRef.current.srcObject = cameraStream
+    }
+  }, [cameraStream])
 
   return (
-    <AuthGuard>
-      <main className="app-shell">
-        <div className="app-frame">
-          <div className="app-layout">
-            <VideoPanel />
-            <AnimationPanel
-              scenes={manimScenes}
-              activeSceneId={activeSceneId}
-              onSceneChange={setActiveSceneId}
-            />
+    <main className="rtc-foundation">
+      <section className="rtc-foundation__card" aria-live="polite">
+        <p className="rtc-foundation__eyebrow">WebRTC foundation</p>
+        <h1>接続基盤を起動中</h1>
+        <p>バックエンドとのWebRTC接続を確立しています。</p>
+        <dl>
+          <div>
+            <dt>接続状態</dt>
+            <dd>{connectionState}</dd>
           </div>
-        </div>
-      </main>
-    </AuthGuard>
+        </dl>
+        {error ? <p className="rtc-foundation__error">{error}</p> : null}
+        <button type="button" onClick={reconnect}>再接続</button>
+        <video
+          ref={cameraVideoRef}
+          autoPlay
+          playsInline
+          muted
+          className="rtc-foundation__video"
+        />
+      </section>
+    </main>
   )
 }
 
