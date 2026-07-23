@@ -1,0 +1,51 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "open-campus-motion-backend"
+version = "1.0.0"
+description = "FastAPI, aiortc, and MediaPipe backend for browser camera motion detection"
+readme = "README.md"
+requires-python = ">=3.11,<3.13"
+dependencies = [
+  "fastapi>=0.115,<1.0",
+  "uvicorn[standard]>=0.30,<1.0",
+  "pydantic-settings>=2.5,<3.0",
+  "python-dotenv>=1.0,<2.0",
+  "aiortc>=1.9,<2.0",
+  "mediapipe>=0.10,<0.11",
+  "numpy>=1.26,<3.0",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.3,<10.0",
+  "pytest-asyncio>=0.24,<2.0",
+  "httpx>=0.27,<1.0",
+  "ruff>=0.8,<1.0",
+  "mypy>=1.13,<2.0",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["app"]
+
+[tool.pytest.ini_options]
+addopts = "-q"
+testpaths = ["tests"]
+pythonpath = ["."]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 88
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "ASYNC", "RUF"]
+ignore = ["E501"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+warn_unused_ignores = true
+exclude = ["models"]
+ignore_missing_imports = true
