@@ -5,14 +5,6 @@ import { VideoPanel } from '../../video/VideoPanel';
 import { DistanceBar } from '../../video/DistanceBar';
 import type { DetectionData } from '../../../features/detection/types';
 
-type FlowStep = {
-  title: string;
-  note: string;
-  active: boolean;
-  done: boolean;
-  triggered?: boolean;
-};
-
 const selectDetection = (
   backendDetection: DetectionData | null,
   localDetection: DetectionData | null,
@@ -23,26 +15,10 @@ const selectDetection = (
   return backendHasUsefulData ? backendDetection : localDetection ?? backendDetection;
 };
 
-const FlowStepCard = ({ step, index }: { step: FlowStep; index: number }) => {
-  const className = [
-    'flow-step',
-    step.done ? 'flow-step--done' : '',
-    step.active ? 'flow-step--active' : '',
-    step.triggered ? 'flow-step--triggered' : '',
-  ]
-    .filter(Boolean)
-    .join(' ');
-
-  return (
-    <div className={className}>
-      <div className="flow-step__dot" aria-hidden="true" />
-      <div className="flow-step__content">
-        <p className="flow-step__kicker">STEP {index + 1}</p>
-        <h3 className="flow-step__title">{step.title}</h3>
-        <p className="flow-step__note">{step.note}</p>
-      </div>
-    </div>
-  );
+type FlowStep = {
+  title: string;
+  description: string;
+  active: boolean;
 };
 
 export const Clap = () => {
@@ -61,52 +37,6 @@ export const Clap = () => {
   const threshold = liveClap?.metrics?.threshold ?? clap?.metrics?.threshold ?? 90;
   const maxDistance = Math.max(threshold * 2.2, 260);
 
-  const hasPoseOrHands = Boolean(detection && (detection.hands.length > 0 || detection.pose?.landmarks?.length));
-  const streamSent = cameraActive && backendState !== 'idle';
-  const pipelineHint = streamSent
-    ? '映像が流れ、骨格の検出と拍手判定が進んでいます。'
-    : 'カメラを開始すると、処理の流れが上から順に光ります。';
-  const detecting = Boolean(hasPoseOrHands);
-  const measuring = distance != null;
-  const reacting = Boolean(clap?.triggered || clap?.active);
-
-  const steps: FlowStep[] = useMemo(
-    () => [
-      {
-        title: 'カメラを開始',
-        note: 'ブラウザのカメラを起動し、映像入力の準備をします。',
-        active: cameraActive,
-        done: cameraActive,
-      },
-      {
-        title: '映像を送信',
-        note: 'WebRTC でカメラ映像をバックエンドへ流します。',
-        active: backendState === 'connecting' || backendState === 'connected',
-        done: backendState === 'connected',
-      },
-      {
-        title: '骨格を検出',
-        note: 'MediaPipe が手や体のランドマークを読み取ります。',
-        active: detecting,
-        done: detecting,
-      },
-      {
-        title: '指先の間隔を計算',
-        note: '両手の中指先端の距離から、拍手に近いかを判定します。',
-        active: measuring,
-        done: measuring,
-      },
-      {
-        title: '反応を表示',
-        note: 'しきい値をまたいだ瞬間に、画面の反応を光らせます。',
-        active: reacting,
-        done: reacting,
-        triggered: Boolean(clap?.triggered),
-      },
-    ],
-    [cameraActive, backendState, detecting, measuring, reacting, clap?.triggered],
-  );
-
   const statusText = cameraActive
     ? backendState === 'connected'
       ? 'LIVE'
@@ -115,18 +45,46 @@ export const Clap = () => {
         : 'CAMERA'
     : 'IDLE';
 
+  const flowSteps: FlowStep[] = [
+    {
+      title: 'カメラを開始',
+      description: 'ブラウザで映像を取得して、デモの入口を開きます。',
+      active: cameraActive,
+    },
+    {
+      title: '映像を送信',
+      description: backendState === 'connected' ? 'WebRTC でフレームをバックエンドへ送っています。' : '接続を準備しています。',
+      active: backendState === 'connecting' || backendState === 'connected',
+    },
+    {
+      title: '骨格を検出',
+      description: '手や体のランドマークを AI が読み取ります。',
+      active: Boolean(detection?.hands.length || detection?.pose?.landmarks?.length),
+    },
+    {
+      title: '中指先端の間隔を計算',
+      description: distance == null ? '両手がそろうと距離を算出します。' : `${distance.toFixed(1)} px を表示中です。`,
+      active: distance != null,
+    },
+    {
+      title: '反応を表示',
+      description: clap?.triggered ? '拍手の瞬間にフラッシュを出しています。' : 'しきい値をまたぐと反応します。',
+      active: Boolean(clap?.triggered),
+    },
+  ];
+
   return (
     <section className="panel panel--video panel--clap">
       <div className="clap-main">
-        <div className="clap-visuals">
+        <div className="clap-visual">
           <VideoPanel cameraRef={cameraRef} detection={detection} />
 
-          <div className="distance-card distance-card--inside">
+          <div className="distance-card distance-card--inside clap-distance-wrap">
             <DistanceBar distance={distance} threshold={threshold} maxDistance={maxDistance} />
           </div>
         </div>
 
-        <aside className="clap-side panel--flow">
+        <aside className="clap-side">
           <div className="panel__actions panel__actions--inline clap-side__top">
             <span className={`status-pill status-pill--${cameraActive ? 'live' : 'idle'}`}>{statusText}</span>
             <button type="button" onClick={cameraActive ? disconnect : connect} className="primary-button">
@@ -134,19 +92,29 @@ export const Clap = () => {
             </button>
           </div>
 
-          <div className="flowchart-card">
-            <div className="flowchart-card__header">
-              <div>
-                <p className="eyebrow">Live pipeline</p>
-                <h2>処理の流れ</h2>
-                <p className="panel__desc">進んだ工程が光って、今どこを見ているか分かります。</p>
-                <p className="panel__desc">{pipelineHint}</p>
-              </div>
-            </div>
+          <p className="clap-side__summary">
+            現在の判定 <strong>{clap?.active ? 'CLAP' : 'OPEN'}</strong>
+            <span>距離 <strong>{distance == null ? '—' : `${distance.toFixed(1)} px`}</strong></span>
+            <span>しきい値 <strong>{threshold.toFixed(1)} px</strong></span>
+          </p>
 
-            <div className="flowchart">
-              {steps.map((step, index) => (
-                <FlowStepCard key={step.title} step={step} index={index} />
+          <div className="clap-flow">
+            <div className="eyebrow clap-flow__eyebrow">PROCESS FLOW</div>
+            <h3 className="clap-flow__title">処理の流れ</h3>
+            <div className="clap-flow__track" aria-label="processing flow">
+              {flowSteps.map((step, index) => (
+                <div
+                  key={step.title}
+                  className={step.active ? 'clap-flow__step clap-flow__step--active' : 'clap-flow__step'}
+                >
+                  <div className="clap-flow__node">
+                    <span>{index + 1}</span>
+                  </div>
+                  <div className="clap-flow__content">
+                    <strong>{step.title}</strong>
+                    <span>{step.description}</span>
+                  </div>
+                </div>
               ))}
             </div>
           </div>
