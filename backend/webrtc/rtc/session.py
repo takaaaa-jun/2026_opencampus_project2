@@ -8,8 +8,8 @@ import threading
 
 from aiortc import RTCConfiguration, RTCDataChannel, RTCPeerConnection, RTCSessionDescription
 
-from .camera_capture import CameraCapture
-from .video_tracks import CameraVideoTrack
+from ..vision.processing_loop import ProcessingLoop
+from .video_tracks import CameraVideoTrack, SkeletonVideoTrack
 
 
 def _start_aiortc_loop() -> asyncio.AbstractEventLoop:
@@ -35,6 +35,8 @@ class RtcSessionManager:
         self._peer_connection: RTCPeerConnection | None = None
         self._detection_channel: RTCDataChannel | None = None
         self._camera_track: CameraVideoTrack | None = None
+        self._skeleton_track: SkeletonVideoTrack | None = None
+        self._processing_loop: ProcessingLoop | None = None
 
     def create_answer(self, offer: RTCSessionDescription) -> RTCSessionDescription:
         """Offerを設定し、WebRTC Answerを同期的に返す。"""
@@ -81,26 +83,37 @@ class RtcSessionManager:
 
     def _add_camera_track(self, peer_connection: RTCPeerConnection) -> None:
         """フロントエンドが用意した最初の映像受信枠へカメラを接続する。"""
-        video_transceiver = next(
-            (transceiver for transceiver in peer_connection.getTransceivers() if transceiver.kind == "video"),
-            None,
-        )
-        if video_transceiver is None:
-            raise RuntimeError("カメラ映像の受信枠がOfferにありません。")
+        video_transceivers = [
+            transceiver for transceiver in peer_connection.getTransceivers() if transceiver.kind == "video"
+        ]
+        if len(video_transceivers) < 2:
+            raise RuntimeError("カメラ映像と骨格映像の受信枠がOfferにありません。")
 
-        self._camera_track = CameraVideoTrack(CameraCapture())
-        video_transceiver.direction = "sendonly"
-        video_transceiver.sender.replaceTrack(self._camera_track)
+        self._processing_loop = ProcessingLoop(send_detection=self.send_detection)
+        self._camera_track = CameraVideoTrack(self._processing_loop.camera_frames)
+        self._skeleton_track = SkeletonVideoTrack(self._processing_loop.skeleton_frames)
+        for transceiver, track in zip(video_transceivers, (self._camera_track, self._skeleton_track)):
+            transceiver.direction = "sendonly"
+            transceiver.sender.replaceTrack(track)
+        self._processing_loop.start()
 
     async def _close_current(self) -> None:
         peer_connection = self._peer_connection
         camera_track = self._camera_track
+        skeleton_track = self._skeleton_track
+        processing_loop = self._processing_loop
         self._peer_connection = None
         self._detection_channel = None
         self._camera_track = None
+        self._skeleton_track = None
+        self._processing_loop = None
 
+        if processing_loop is not None:
+            processing_loop.stop()
         if camera_track is not None:
             camera_track.stop()
+        if skeleton_track is not None:
+            skeleton_track.stop()
         if peer_connection is not None:
             await peer_connection.close()
 

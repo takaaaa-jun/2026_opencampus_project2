@@ -78,6 +78,21 @@
   object-fit: cover;
 }
 
+.rtc-foundation__videos {
+  display: grid;
+  gap: 16px;
+}
+
+.rtc-foundation__videos > div {
+  display: grid;
+  gap: 8px;
+}
+
+.rtc-foundation__videos p {
+  color: #a8b6cc;
+  font-size: 0.875rem;
+}
+
 .rtc-foundation__error {
   color: #fda4af;
 }

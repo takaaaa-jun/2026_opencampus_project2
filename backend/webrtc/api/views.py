@@ -5,7 +5,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.shortcuts import render
 from django.views.decorators.clickjacking import xframe_options_exempt
 
-from .rtc_session import rtc_session_manager
+from ..rtc.session import rtc_session_manager
 
 
 def _parse_json(request):

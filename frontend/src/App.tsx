@@ -3,14 +3,21 @@ import { useWebRTC } from './hooks/useWebRTC'
 import './App.css'
 
 function App() {
-  const { cameraStream, connectionState, error, reconnect } = useWebRTC()
+  const { cameraStream, skeletonStream, connectionState, error, reconnect } = useWebRTC()
   const cameraVideoRef = useRef<HTMLVideoElement | null>(null)
+  const skeletonVideoRef = useRef<HTMLVideoElement | null>(null)
 
   useEffect(() => {
     if (cameraVideoRef.current) {
       cameraVideoRef.current.srcObject = cameraStream
     }
   }, [cameraStream])
+
+  useEffect(() => {
+    if (skeletonVideoRef.current) {
+      skeletonVideoRef.current.srcObject = skeletonStream
+    }
+  }, [skeletonStream])
 
   return (
     <main className="rtc-foundation">
@@ -26,13 +33,28 @@ function App() {
         </dl>
         {error ? <p className="rtc-foundation__error">{error}</p> : null}
         <button type="button" onClick={reconnect}>再接続</button>
-        <video
-          ref={cameraVideoRef}
-          autoPlay
-          playsInline
-          muted
-          className="rtc-foundation__video"
-        />
+        <div className="rtc-foundation__videos">
+          <div>
+            <p>カメラ映像</p>
+            <video
+              ref={cameraVideoRef}
+              autoPlay
+              playsInline
+              muted
+              className="rtc-foundation__video"
+            />
+          </div>
+          <div>
+            <p>骨格映像</p>
+            <video
+              ref={skeletonVideoRef}
+              autoPlay
+              playsInline
+              muted
+              className="rtc-foundation__video"
+            />
+          </div>
+        </div>
       </section>
     </main>
   )

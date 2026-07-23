@@ -1,0 +1,1 @@
+"""DjangoのHTTP API入口。"""

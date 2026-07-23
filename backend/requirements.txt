@@ -3,3 +3,4 @@ aiortc==1.14.0
 numpy>=2.0,<3.0
 django-cors-headers
 opencv-python>=4.10
+mediapipe==0.10.21

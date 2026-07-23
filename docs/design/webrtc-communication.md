@@ -111,30 +111,37 @@ const detectionChannel = peerConnection.createDataChannel('detection', {
 
 ```text
 backend/webrtc/
-├─ views.py                 # POST /api/webrtc/offer を受け付けるDjango View
-├─ rtc_session.py           # aiortcのRTCPeerConnectionとDataChannelを管理
-├─ processing_loop.py       # カメラ取得からWebRTC送信までを順に実行
-├─ camera_capture.py        # カメラを開き、フレームを取得
-├─ mediapipe_detector.py    # MediaPipe Pose・Handsで骨格を検知
-├─ action.py                # 既存のaction()で動作判定と途中値を計算
-├─ skeleton_renderer.py     # 骨格情報をカメラ映像へ描画
-├─ video_tracks.py          # カメラ映像・骨格映像のMediaStreamTrack
-└─ detection_serializer.py  # MediaPipeと判定結果を送信用JSONへ変換
+├─ api/
+│  ├─ urls.py               # POST /api/webrtc/offer のURL定義
+│  └─ views.py              # Offerを受け付け、Answerを返すDjango View
+├─ rtc/
+│  ├─ session.py            # aiortcのRTCPeerConnectionとDataChannelを管理
+│  └─ video_tracks.py       # カメラ映像・骨格映像のMediaStreamTrack
+├─ vision/
+│  ├─ camera.py             # カメラを開き、フレームを取得
+│  ├─ mediapipe_detector.py # MediaPipe Pose・Handsで骨格を検知
+│  ├─ skeleton_renderer.py  # 骨格情報をカメラ映像へ描画
+│  └─ processing_loop.py    # カメラ取得からWebRTC送信までを順に実行
+└─ detection/
+   ├─ action.py             # 既存のaction()による動作判定
+   ├─ action_evaluator.py   # 判定結果を送信用の動作名へ対応づける
+   └─ serializer.py         # MediaPipeと判定結果を送信用JSONへ変換
 ```
 
 ### 処理の分担
 
 | モジュール | 担当 |
 | --- | --- |
-| `views.py` | Offerを受け取り、`rtc_session`にAnswerの作成を依頼して返す。 |
-| `rtc_session.py` | `RTCPeerConnection`を作成し、映像トラックの追加、`detection` DataChannelの受信、接続の終了処理を行う。 |
-| `processing_loop.py` | カメラフレームを受け取り、骨格検知、動作判定、骨格映像作成、JSON化、WebRTC送信を順番に呼び出す。 |
-| `camera_capture.py` | カメラを唯一開き、カメラ映像のフレームを返す。 |
-| `mediapipe_detector.py` | カメラフレームから`pose_results`と`hands_results`を返す。 |
-| `action.py` | 既存の`action()`が`pose_results`と`hands_results`を使い、`actions`と`actionDetails`を作成する。 |
-| `skeleton_renderer.py` | カメラフレームとMediaPipeの検知結果から、骨格を描画した映像フレームを返す。 |
-| `video_tracks.py` | `processing_loop`が生成したカメラ映像と骨格映像を、それぞれWebRTC映像トラックとして提供する。 |
-| `detection_serializer.py` | `pose_results`、`hands_results`、動作判定結果を[アプリケーション設計](README.md)のJSON構造へ変換する。 |
+| `api/views.py` | Offerを受け取り、`rtc/session.py`にAnswerの作成を依頼して返す。 |
+| `rtc/session.py` | `RTCPeerConnection`を作成し、映像トラックの追加、`detection` DataChannelの受信、接続の終了処理を行う。 |
+| `vision/processing_loop.py` | カメラフレームを受け取り、骨格検知、動作判定、骨格映像作成、JSON化、WebRTC送信を順番に呼び出す。 |
+| `vision/camera.py` | カメラを唯一開き、カメラ映像のフレームを返す。 |
+| `vision/mediapipe_detector.py` | カメラフレームから`pose_results`と`hands_results`を返す。 |
+| `detection/action.py` | 既存の`action()`による動作判定を行う。 |
+| `detection/action_evaluator.py` | `action()`を呼び出し、`actions`と`actionDetails`を作成する。 |
+| `vision/skeleton_renderer.py` | カメラフレームとMediaPipeの検知結果から、骨格を描画した映像フレームを返す。 |
+| `rtc/video_tracks.py` | `vision/processing_loop.py`が生成したカメラ映像と骨格映像を、それぞれWebRTC映像トラックとして提供する。 |
+| `detection/serializer.py` | `pose_results`、`hands_results`、動作判定結果を[アプリケーション設計](README.md)のJSON構造へ変換する。 |
 
 ### バックエンドの処理フロー
 
