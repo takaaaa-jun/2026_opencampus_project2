@@ -1,73 +1,72 @@
 .rtc-foundation {
   display: grid;
   min-height: 100svh;
-  place-items: center;
-  padding: 24px;
-  background: #101827;
-  color: #ecf3ff;
-}
-
-.rtc-foundation__card {
-  display: grid;
-  width: min(100%, 480px);
-  gap: 16px;
+  align-items: start;
   padding: 32px;
-  border: 1px solid #334155;
-  border-radius: 20px;
-  background: #172033;
-  box-shadow: 0 24px 72px rgb(0 0 0 / 25%);
+  background: #ffffff;
+  color: #111827;
 }
 
-.rtc-foundation__eyebrow {
-  margin: 0;
-  color: #7dd3fc;
-  font-size: 0.8rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+.rtc-foundation__layout {
+  display: grid;
+  /* 左列はVideoPanel、右列は将来のExplanationPanel用。 */
+  grid-template-columns: minmax(0, 4fr) minmax(0, 6fr);
+  width: 100%;
+  gap: 20px 40px;
 }
 
-.rtc-foundation h1,
-.rtc-foundation p {
-  margin: 0;
+.rtc-foundation__video-column {
+  display: grid;
+  grid-column: 1;
+  align-content: start;
+  gap: 20px;
+  min-width: 0;
 }
 
-.rtc-foundation h1 {
-  font-size: clamp(1.5rem, 5vw, 2.25rem);
-}
-
-.rtc-foundation dl,
-.rtc-foundation dl div {
-  margin: 0;
-}
-
-.rtc-foundation dl div {
+.rtc-foundation__video-header {
   display: flex;
-  justify-content: space-between;
+  align-items: center;
   gap: 16px;
-  padding: 12px 0;
-  border-block: 1px solid #334155;
 }
 
-.rtc-foundation dt {
-  color: #a8b6cc;
-}
-
-.rtc-foundation dd {
+.last-detected-action {
   margin: 0;
+  color: #334155;
   font-weight: 700;
 }
 
-.rtc-foundation button {
+.camera-control {
   justify-self: start;
   padding: 10px 16px;
   border: 0;
   border-radius: 8px;
-  background: #38bdf8;
-  color: #082f49;
   cursor: pointer;
   font: inherit;
   font-weight: 700;
+  transition: background 150ms ease, color 150ms ease;
+}
+
+.camera-control--idle {
+  background: #38bdf8;
+  color: #082f49;
+}
+
+.camera-control--connecting,
+.camera-control--new {
+  background: #facc15;
+  color: #422006;
+}
+
+.camera-control--connected {
+  background: #4ade80;
+  color: #052e16;
+}
+
+.camera-control--failed,
+.camera-control--disconnected,
+.camera-control--closed {
+  background: #fda4af;
+  color: #4c0519;
 }
 
 .rtc-foundation__video {
@@ -78,21 +77,29 @@
   object-fit: cover;
 }
 
-.rtc-foundation__videos {
+.video-panel {
   display: grid;
-  gap: 16px;
+  width: 100%;
+  gap: 24px;
 }
 
-.rtc-foundation__videos > div {
+.video-panel > div {
   display: grid;
   gap: 8px;
 }
 
-.rtc-foundation__videos p {
-  color: #a8b6cc;
+.video-panel p {
+  margin: 0;
+  color: #4b5563;
   font-size: 0.875rem;
 }
 
-.rtc-foundation__error {
-  color: #fda4af;
+@media (max-width: 800px) {
+  .rtc-foundation {
+    padding: 16px;
+  }
+
+  .rtc-foundation__layout {
+    grid-template-columns: 1fr;
+  }
 }

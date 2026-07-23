@@ -1,60 +1,90 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useState } from 'react'
+import { ExplanationPanel } from './components/ExplanationPanel/ExplanationPanel'
+import { VideoPanel } from './components/VideoPanel/VideoPanel'
 import { useWebRTC } from './hooks/useWebRTC'
+import type { DetectionData } from './types/detection'
 import './App.css'
 
+const actionLabels: Record<string, string> = {
+  jump: 'ジャンプ',
+  sit: '座る',
+  tpose: 'Tポーズ',
+  surprise: '驚かし',
+  kick: 'キック',
+  upper: 'アッパー',
+  swing: 'スイング',
+  closs: '腕を交差',
+  clap: '拍手',
+  grab: '掴む',
+  kamehameha: 'かめはめ波',
+  kamehameha_continue: 'かめはめ波（継続）',
+}
+
+function getDetectedActionLabel(detectionData: DetectionData | null): string | null {
+  if (detectionData === null || typeof detectionData.actions !== 'object' || detectionData.actions === null) {
+    return null
+  }
+
+  const actions = detectionData.actions as Record<string, unknown>
+  return Object.entries(actionLabels).find(([actionId]) => actions[actionId] === true)?.[1] ?? null
+}
+
 function App() {
-  const { cameraStream, skeletonStream, connectionState, error, reconnect } = useWebRTC()
-  const cameraVideoRef = useRef<HTMLVideoElement | null>(null)
-  const skeletonVideoRef = useRef<HTMLVideoElement | null>(null)
+  const {
+    cameraStream,
+    skeletonStream,
+    detectionData,
+    connectionState,
+    isCameraStarted,
+    startCamera,
+    stopCamera,
+    reconnect,
+  } = useWebRTC()
+  const [lastDetectedAction, setLastDetectedAction] = useState('なし')
 
   useEffect(() => {
-    if (cameraVideoRef.current) {
-      cameraVideoRef.current.srcObject = cameraStream
+    if (!isCameraStarted) {
+      setLastDetectedAction('なし')
+      return
     }
-  }, [cameraStream])
 
-  useEffect(() => {
-    if (skeletonVideoRef.current) {
-      skeletonVideoRef.current.srcObject = skeletonStream
+    const detectedActionLabel = getDetectedActionLabel(detectionData)
+    if (detectedActionLabel !== null) {
+      setLastDetectedAction(detectedActionLabel)
     }
-  }, [skeletonStream])
+  }, [detectionData, isCameraStarted])
+
+  const buttonState = isCameraStarted ? connectionState : 'idle'
+  const buttonLabel = !isCameraStarted
+    ? 'カメラを起動'
+    : connectionState === 'failed'
+      ? '再接続'
+      : connectionState === 'connecting'
+        ? '接続中（停止）'
+        : 'カメラを停止'
+  const handleCameraButton = !isCameraStarted
+    ? startCamera
+    : connectionState === 'failed'
+      ? reconnect
+      : stopCamera
 
   return (
     <main className="rtc-foundation">
-      <section className="rtc-foundation__card" aria-live="polite">
-        <p className="rtc-foundation__eyebrow">WebRTC foundation</p>
-        <h1>接続基盤を起動中</h1>
-        <p>バックエンドとのWebRTC接続を確立しています。</p>
-        <dl>
-          <div>
-            <dt>接続状態</dt>
-            <dd>{connectionState}</dd>
+      <section className="rtc-foundation__layout" aria-live="polite">
+        <div className="rtc-foundation__video-column">
+          <div className="rtc-foundation__video-header">
+            <button
+              type="button"
+              className={`camera-control camera-control--${buttonState}`}
+              onClick={handleCameraButton}
+            >
+              {buttonLabel}
+            </button>
+            <p className="last-detected-action">最後に検知：{lastDetectedAction}</p>
           </div>
-        </dl>
-        {error ? <p className="rtc-foundation__error">{error}</p> : null}
-        <button type="button" onClick={reconnect}>再接続</button>
-        <div className="rtc-foundation__videos">
-          <div>
-            <p>カメラ映像</p>
-            <video
-              ref={cameraVideoRef}
-              autoPlay
-              playsInline
-              muted
-              className="rtc-foundation__video"
-            />
-          </div>
-          <div>
-            <p>骨格映像</p>
-            <video
-              ref={skeletonVideoRef}
-              autoPlay
-              playsInline
-              muted
-              className="rtc-foundation__video"
-            />
-          </div>
+          <VideoPanel cameraStream={cameraStream} skeletonStream={skeletonStream} />
         </div>
+        <ExplanationPanel detectionData={detectionData} />
       </section>
     </main>
   )

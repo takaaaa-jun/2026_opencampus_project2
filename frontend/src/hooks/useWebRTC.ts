@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import type { DetectionData } from '../types/detection'
 
 type ConnectionState = RTCPeerConnectionState | 'idle'
 
@@ -6,6 +7,8 @@ type OfferResponse = {
   type?: RTCSdpType
   sdp?: string
 }
+
+const MAX_AUTO_RECONNECT_ATTEMPTS = 3
 
 function waitForIceGatheringComplete(peerConnection: RTCPeerConnection): Promise<void> {
   if (peerConnection.iceGatheringState === 'complete') {
@@ -27,16 +30,41 @@ function waitForIceGatheringComplete(peerConnection: RTCPeerConnection): Promise
 export function useWebRTC() {
   const [cameraStream, setCameraStream] = useState<MediaStream | null>(null)
   const [skeletonStream, setSkeletonStream] = useState<MediaStream | null>(null)
-  const [detectionData, setDetectionData] = useState<Record<string, unknown> | null>(null)
+  const [detectionData, setDetectionData] = useState<DetectionData | null>(null)
   const [connectionState, setConnectionState] = useState<ConnectionState>('idle')
   const [error, setError] = useState<string | null>(null)
   const [connectionAttempt, setConnectionAttempt] = useState(0)
+  const [autoReconnectAttempts, setAutoReconnectAttempts] = useState(0)
+  const [isCameraStarted, setIsCameraStarted] = useState(false)
+  const peerConnectionRef = useRef<RTCPeerConnection | null>(null)
 
-  const reconnect = useCallback(() => {
+  const startCamera = useCallback(() => {
+    setIsCameraStarted(true)
+    setAutoReconnectAttempts(0)
     setConnectionAttempt((current) => current + 1)
   }, [])
 
+  const reconnect = startCamera
+
+  const stopCamera = useCallback(() => {
+    setIsCameraStarted(false)
+    peerConnectionRef.current?.close()
+    peerConnectionRef.current = null
+    setCameraStream(null)
+    setSkeletonStream(null)
+    setDetectionData(null)
+    setConnectionState('idle')
+    setError(null)
+    setAutoReconnectAttempts(0)
+
+    void fetch('/api/webrtc/close/', { method: 'POST' })
+  }, [])
+
   useEffect(() => {
+    if (!isCameraStarted) {
+      return
+    }
+
     let disposed = false
     let reconnectScheduled = false
     let peerConnection: RTCPeerConnection | null = null
@@ -46,10 +74,16 @@ export function useWebRTC() {
         return
       }
 
+      if (autoReconnectAttempts >= MAX_AUTO_RECONNECT_ATTEMPTS) {
+        setError('自動再接続に3回失敗しました。再接続ボタンを押してください。')
+        return
+      }
+
       reconnectScheduled = true
       window.setTimeout(() => {
         if (!disposed) {
-          reconnect()
+          setAutoReconnectAttempts((current) => current + 1)
+          setConnectionAttempt((current) => current + 1)
         }
       }, 1000)
     }
@@ -64,6 +98,7 @@ export function useWebRTC() {
       try {
         const connection = new RTCPeerConnection({ iceServers: [] })
         peerConnection = connection
+        peerConnectionRef.current = connection
 
         const cameraTransceiver = connection.addTransceiver('video', { direction: 'recvonly' })
         const skeletonTransceiver = connection.addTransceiver('video', { direction: 'recvonly' })
@@ -73,7 +108,9 @@ export function useWebRTC() {
         })
 
         connection.addEventListener('track', (event) => {
-          const stream = event.streams[0] ?? new MediaStream([event.track])
+          // aiortcが2本の映像を同じMediaStreamに含める場合でも、
+          // 各video要素には対応する1本のトラックだけを設定する。
+          const stream = new MediaStream([event.track])
 
           if (event.transceiver === cameraTransceiver) {
             setCameraStream(stream)
@@ -89,7 +126,7 @@ export function useWebRTC() {
           }
 
           try {
-            setDetectionData(JSON.parse(event.data) as Record<string, unknown>)
+            setDetectionData(JSON.parse(event.data) as DetectionData)
           } catch {
             // JSONではないDataChannelメッセージは無視する。
           }
@@ -101,6 +138,9 @@ export function useWebRTC() {
           }
 
           setConnectionState(connection.connectionState)
+          if (connection.connectionState === 'connected') {
+            setAutoReconnectAttempts(0)
+          }
           if (connection.connectionState === 'failed' || connection.connectionState === 'disconnected') {
             scheduleReconnect()
           }
@@ -138,8 +178,11 @@ export function useWebRTC() {
     return () => {
       disposed = true
       peerConnection?.close()
+      if (peerConnectionRef.current === peerConnection) {
+        peerConnectionRef.current = null
+      }
     }
-  }, [connectionAttempt, reconnect])
+  }, [autoReconnectAttempts, connectionAttempt, isCameraStarted])
 
   return {
     cameraStream,
@@ -147,6 +190,9 @@ export function useWebRTC() {
     detectionData,
     connectionState,
     error,
+    isCameraStarted,
+    startCamera,
+    stopCamera,
     reconnect,
   }
 }
