@@ -4,24 +4,28 @@ import './ClapExplanation.css'
 type Point = {
   x: number
   y: number
-  z?: number
 }
 
-type Hand = {
-  landmarks: Array<Point | null>
+type ClapDetails = {
+  isPoseAvailable: boolean
+  leftPalmCenter: Point | null
+  rightPalmCenter: Point | null
+  shoulderWidth: number | null
+  normalizedDistance: number | null
+  closingSpeed: number | null
+  approachFrames: number
+  approachSpeedThreshold: number
+  contactDistanceThreshold: number
+  stopSpeedThreshold: number
+  hasApproached: boolean
+  isCloseEnough: boolean
+  isStopped: boolean
+  isCoolingDown: boolean
+  triggered: boolean
 }
 
-const HAND_CONNECTIONS: Array<[number, number]> = [
-  [0, 1], [1, 2], [2, 3], [3, 4],
-  [0, 5], [5, 6], [6, 7], [7, 8],
-  [5, 9], [9, 10], [10, 11], [11, 12],
-  [9, 13], [13, 14], [14, 15], [15, 16],
-  [13, 17], [17, 18], [18, 19], [19, 20],
-  [0, 17],
-]
-
-const CLAP_THRESHOLD = 0.05
-const CLAP_LANDMARK_INDEX = 12
+const LEFT_PALM_POINTS = [15, 17, 19, 21]
+const RIGHT_PALM_POINTS = [16, 18, 20, 22]
 
 function isPoint(value: unknown): value is Point {
   if (typeof value !== 'object' || value === null) {
@@ -32,77 +36,84 @@ function isPoint(value: unknown): value is Point {
   return typeof point.x === 'number' && typeof point.y === 'number'
 }
 
-function getHands(detectionData: ExplanationProps['detectionData']): Hand[] {
-  if (detectionData === null || !Array.isArray(detectionData.hands)) {
+function isNumberOrNull(value: unknown): value is number | null {
+  return typeof value === 'number' || value === null
+}
+
+function getPoseLandmarks(detectionData: ExplanationProps['detectionData']): Array<Point | null> {
+  if (detectionData === null || typeof detectionData.pose !== 'object' || detectionData.pose === null) {
     return []
   }
 
-  return detectionData.hands.flatMap((hand) => {
-    if (typeof hand !== 'object' || hand === null) {
-      return []
-    }
+  const landmarks = (detectionData.pose as Record<string, unknown>).landmarks
+  if (!Array.isArray(landmarks)) {
+    return []
+  }
 
-    const landmarks = (hand as Record<string, unknown>).landmarks
-    if (!Array.isArray(landmarks)) {
-      return []
-    }
-
-    const detectedLandmarks = landmarks.map((landmark) => (isPoint(landmark) ? landmark : null))
-    return detectedLandmarks.some((landmark) => landmark !== null) ? [{ landmarks: detectedLandmarks }] : []
-  })
+  return landmarks.map((landmark) => (isPoint(landmark) ? landmark : null))
 }
 
-function distanceBetween(point1: Point, point2: Point) {
-  return Math.hypot(point1.x - point2.x, point1.y - point2.y)
+function getClapDetails(detectionData: ExplanationProps['detectionData']): ClapDetails | null {
+  if (detectionData === null || typeof detectionData.actionDetails !== 'object' || detectionData.actionDetails === null) {
+    return null
+  }
+
+  const clap = (detectionData.actionDetails as Record<string, unknown>).clap
+  if (typeof clap !== 'object' || clap === null) {
+    return null
+  }
+
+  const details = clap as Record<string, unknown>
+  if (
+    typeof details.isPoseAvailable !== 'boolean' ||
+    !isNumberOrNull(details.shoulderWidth) ||
+    !isNumberOrNull(details.normalizedDistance) ||
+    !isNumberOrNull(details.closingSpeed) ||
+    typeof details.approachFrames !== 'number' ||
+    typeof details.approachSpeedThreshold !== 'number' ||
+    typeof details.contactDistanceThreshold !== 'number' ||
+    typeof details.stopSpeedThreshold !== 'number' ||
+    typeof details.hasApproached !== 'boolean' ||
+    typeof details.isCloseEnough !== 'boolean' ||
+    typeof details.isStopped !== 'boolean' ||
+    typeof details.isCoolingDown !== 'boolean' ||
+    typeof details.triggered !== 'boolean'
+  ) {
+    return null
+  }
+
+  return {
+    isPoseAvailable: details.isPoseAvailable,
+    leftPalmCenter: isPoint(details.leftPalmCenter) ? details.leftPalmCenter : null,
+    rightPalmCenter: isPoint(details.rightPalmCenter) ? details.rightPalmCenter : null,
+    shoulderWidth: details.shoulderWidth,
+    normalizedDistance: details.normalizedDistance,
+    closingSpeed: details.closingSpeed,
+    approachFrames: details.approachFrames,
+    approachSpeedThreshold: details.approachSpeedThreshold,
+    contactDistanceThreshold: details.contactDistanceThreshold,
+    stopSpeedThreshold: details.stopSpeedThreshold,
+    hasApproached: details.hasApproached,
+    isCloseEnough: details.isCloseEnough,
+    isStopped: details.isStopped,
+    isCoolingDown: details.isCoolingDown,
+    triggered: details.triggered,
+  }
 }
 
-function HandSkeleton({ hand, color }: { hand: Hand; color: string }) {
+function LandmarkGroup({ landmarks, indices, color }: { landmarks: Array<Point | null>; indices: number[]; color: string }) {
   return (
     <>
-      {HAND_CONNECTIONS.map(([startIndex, endIndex]) => {
-        const start = hand.landmarks[startIndex]
-        const end = hand.landmarks[endIndex]
-
-        if (start === undefined || start === null || end === undefined || end === null) {
-          return null
-        }
-
-        return (
-          <line
-            key={`${startIndex}-${endIndex}`}
-            x1={start.x}
-            y1={start.y}
-            x2={end.x}
-            y2={end.y}
-            className="clap-explanation__hand-line"
-            stroke={color}
-            strokeWidth={0.008}
-          />
-        )
-      })}
-      {hand.landmarks.map((point, index) => {
-        if (point === null) {
+      {indices.map((index) => {
+        const point = landmarks[index]
+        if (point === undefined || point === null) {
           return null
         }
 
         return (
           <g key={index}>
-            <circle
-              cx={point.x}
-              cy={point.y}
-              r={index === CLAP_LANDMARK_INDEX ? 0.018 : 0.008}
-              className={index === CLAP_LANDMARK_INDEX ? 'clap-explanation__target-point' : 'clap-explanation__hand-point'}
-              fill={color}
-            />
-            <text
-              x={point.x + 0.012}
-              y={point.y - 0.012}
-              fontSize={0.025}
-              stroke="#ffffff"
-              strokeWidth={0.005}
-              paintOrder="stroke"
-              className="clap-explanation__landmark-label"
-            >
+            <circle cx={point.x} cy={point.y} r={0.012} fill={color} />
+            <text x={point.x + 0.018} y={point.y - 0.018} fontSize={0.032} className="clap-explanation__landmark-label">
               {index}
             </text>
           </g>
@@ -112,66 +123,99 @@ function HandSkeleton({ hand, color }: { hand: Hand; color: string }) {
   )
 }
 
+function ConditionStep({ passed, title, value }: { passed: boolean; title: string; value: string }) {
+  return (
+    <li className={passed ? 'is-passed' : ''}>
+      <span aria-hidden="true">{passed ? '✓' : '○'}</span>
+      <div>
+        <strong>{title}</strong>
+        <small>{value}</small>
+      </div>
+    </li>
+  )
+}
+
+function formatValue(value: number | null, digits = 3) {
+  return value === null ? '—' : value.toFixed(digits)
+}
+
 export function ClapExplanation({ detectionData }: ExplanationProps) {
-  const hands = getHands(detectionData)
-  const hand1 = hands[0]
-  const hand2 = hands[1]
-  const hasHands = hands.length > 0
-  const point1 = hand1?.landmarks[CLAP_LANDMARK_INDEX]
-  const point2 = hand2?.landmarks[CLAP_LANDMARK_INDEX]
-  const distance = point1 !== undefined && point1 !== null && point2 !== undefined && point2 !== null
-    ? distanceBetween(point1, point2)
+  const landmarks = getPoseLandmarks(detectionData)
+  const details = getClapDetails(detectionData)
+  const leftShoulder = landmarks[11]
+  const rightShoulder = landmarks[12]
+  const visualization = details !== null &&
+    details.isPoseAvailable &&
+    leftShoulder !== undefined && leftShoulder !== null &&
+    rightShoulder !== undefined && rightShoulder !== null &&
+    details.leftPalmCenter !== null &&
+    details.rightPalmCenter !== null
+    ? {
+        details,
+        leftShoulder,
+        rightShoulder,
+        leftPalmCenter: details.leftPalmCenter,
+        rightPalmCenter: details.rightPalmCenter,
+      }
     : null
-  const isClapping = distance !== null && distance < CLAP_THRESHOLD
-  const distanceRatio = distance === null ? 0 : Math.min((distance / CLAP_THRESHOLD) * 100, 100)
+  const resultText = details?.triggered ? 'たたく！' : details?.isCoolingDown ? '判定後の待機中' : '動きを検出中'
 
   return (
     <section className="clap-explanation" aria-label="たたく動作の判定過程">
-      <p className="clap-explanation__lead">12番の点どうしの距離で判定します</p>
+      <p className="clap-explanation__lead">手のひら中心の動きで、たたく動作を判定します</p>
 
       <div className="clap-explanation__visualization">
-        {hasHands ? (
-          <svg viewBox="0 0 1 1" role="img" aria-label="2本の手の骨格と12番ランドマーク">
-            {hand1 !== undefined ? <HandSkeleton hand={hand1} color="#0ea5e9" /> : null}
-            {hand2 !== undefined ? <HandSkeleton hand={hand2} color="#a855f7" /> : null}
-            {point1 !== undefined && point1 !== null && point2 !== undefined && point2 !== null ? (
-              <line
-                x1={point1.x}
-                y1={point1.y}
-                x2={point2.x}
-                y2={point2.y}
-                className={isClapping ? 'clap-explanation__distance-line is-close' : 'clap-explanation__distance-line'}
-                strokeWidth={0.009}
-              />
-            ) : null}
+        {visualization !== null ? (
+          <svg viewBox="0 0 1 1" role="img" aria-label="肩幅と左右の手のひら中心">
+            <line x1={visualization.leftShoulder.x} y1={visualization.leftShoulder.y} x2={visualization.rightShoulder.x} y2={visualization.rightShoulder.y} className="clap-explanation__shoulder-line" />
+            <circle cx={visualization.leftShoulder.x} cy={visualization.leftShoulder.y} r={0.014} className="clap-explanation__shoulder-point" />
+            <circle cx={visualization.rightShoulder.x} cy={visualization.rightShoulder.y} r={0.014} className="clap-explanation__shoulder-point" />
+            <text x={(visualization.leftShoulder.x + visualization.rightShoulder.x) / 2} y={(visualization.leftShoulder.y + visualization.rightShoulder.y) - 0.03} fontSize={0.032} className="clap-explanation__line-label">肩幅</text>
+
+            <LandmarkGroup landmarks={landmarks} indices={LEFT_PALM_POINTS} color="#0ea5e9" />
+            <LandmarkGroup landmarks={landmarks} indices={RIGHT_PALM_POINTS} color="#a855f7" />
+
+            <line
+              x1={visualization.leftPalmCenter.x}
+              y1={visualization.leftPalmCenter.y}
+              x2={visualization.rightPalmCenter.x}
+              y2={visualization.rightPalmCenter.y}
+              className={visualization.details.isCloseEnough ? 'clap-explanation__palm-line is-close' : 'clap-explanation__palm-line'}
+            />
+            <circle cx={visualization.leftPalmCenter.x} cy={visualization.leftPalmCenter.y} r={0.022} className="clap-explanation__palm-center left" />
+            <circle cx={visualization.rightPalmCenter.x} cy={visualization.rightPalmCenter.y} r={0.022} className="clap-explanation__palm-center right" />
+            <text x={visualization.leftPalmCenter.x} y={visualization.leftPalmCenter.y - 0.035} fontSize={0.03} className="clap-explanation__center-label">左の中心</text>
+            <text x={visualization.rightPalmCenter.x} y={visualization.rightPalmCenter.y - 0.035} fontSize={0.03} className="clap-explanation__center-label">右の中心</text>
           </svg>
         ) : (
-          <p className="clap-explanation__waiting">両手をカメラに映してね</p>
+          <p className="clap-explanation__waiting">肩と両手が映るように、少し離れて立ってね</p>
         )}
       </div>
 
       <div className="clap-explanation__metrics">
-        <div>
-          <span>現在の距離</span>
-          <strong>{distance === null ? '—' : distance.toFixed(3)}</strong>
-        </div>
-        <div>
-          <span>しきい値</span>
-          <strong>{CLAP_THRESHOLD.toFixed(3)} 未満</strong>
-        </div>
+        <div><span>肩幅</span><strong>{formatValue(details?.shoulderWidth ?? null)}</strong></div>
+        <div><span>正規化した距離</span><strong>{formatValue(details?.normalizedDistance ?? null)}</strong></div>
       </div>
 
-      <div className="clap-explanation__condition">
-        <div className="clap-explanation__condition-header">
-          <span>distance &lt; 0.05</span>
-          <strong className={isClapping ? 'is-clapping' : ''}>
-            {distance === null ? '12番の点を検出できていません' : isClapping ? 'たたく！' : '手を近づけよう'}
-          </strong>
-        </div>
-        <div className="clap-explanation__bar" aria-hidden="true">
-          <span className={isClapping ? 'is-close' : ''} style={{ width: `${distanceRatio}%` }} />
-        </div>
-      </div>
+      <ol className="clap-explanation__conditions">
+        <ConditionStep
+          passed={details?.hasApproached === true}
+          title="手のひらが近づいている"
+          value={`速度 ${formatValue(details?.closingSpeed ?? null)}（${formatValue(details?.approachSpeedThreshold ?? null)} 以上を2フレーム）`}
+        />
+        <ConditionStep
+          passed={details?.isCloseEnough === true}
+          title="十分に近い"
+          value={`距離 ${formatValue(details?.normalizedDistance ?? null)} / ${formatValue(details?.contactDistanceThreshold ?? null)}`}
+        />
+        <ConditionStep
+          passed={details?.isStopped === true}
+          title="当たった位置で止まった"
+          value={`速度 ${formatValue(details?.closingSpeed ?? null)} / ${formatValue(details?.stopSpeedThreshold ?? null)}`}
+        />
+      </ol>
+
+      <p className={`clap-explanation__result${details?.triggered ? ' is-triggered' : ''}`}>{resultText}</p>
     </section>
   )
 }
