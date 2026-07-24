@@ -38,16 +38,13 @@ class ActionEvaluator:
             actions["kick"] = self._action.check_kick(landmarks)
             actions["swing"] = self._action.judge_swing(pose_coordinates)
             actions["closs"] = bool(self._action.judge_closs_arms(pose_coordinates))
-
-            left_upper = self._action.judge_upper(landmarks[15].y, landmarks[11].y)
-            right_upper = self._action.judge_upper(landmarks[16].y, landmarks[12].y)
-            actions["upper"] = bool(left_upper or right_upper)
+            actions["upper"] = self._action.judge_uppercut(pose_coordinates)
+            actions["clap"] = self._action.judge_clap(pose_coordinates)
 
         if hands_results.multi_hand_landmarks:
             hands = hands_results.multi_hand_landmarks
             actions["grab"] = any(self._action.judge_grab(hand) for hand in hands)
             if len(hands) == 2:
-                actions["clap"] = self._action.judge_crap(hands[0], hands[1])
                 actions["kamehameha"] = bool(self._action.is_kamehameha(hands[0], hands[1]))
                 actions["kamehameha_continue"] = self._action.judge_kamehameha(hands[0], hands[1])
 
