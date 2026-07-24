@@ -13,18 +13,23 @@ class ClapDetector:
         approach_speed=0.4,
         contact_distance=0.35,
         stop_speed=0.15,
-        cooldown_seconds=0.4,
+        rebound_speed=0.15,
+        approach_hold_seconds=1.0,
+        cooldown_seconds=0.2,
         clock=time.monotonic,
     ):
         self._approach_speed = approach_speed
         self._contact_distance = contact_distance
         self._stop_speed = stop_speed
+        self._rebound_speed = rebound_speed
+        self._approach_hold_seconds = approach_hold_seconds
         self._cooldown_seconds = cooldown_seconds
         self._clock = clock
         self._previous_distance = None
         self._previous_time = None
         self._approach_frames = 0
-        self._approach_started_at = None
+        self._last_approach_at = None
+        self._has_been_close = False
         self._cooldown_until = 0.0
         self._details = self._empty_details()
 
@@ -68,10 +73,25 @@ class ClapDetector:
             self._update_details(left_palm, right_palm, shoulder_width, current_distance, closing_speed, now)
             return False
 
+        if current_distance > 1:
+            self._reset_motion()
+        elif closing_speed >= self._approach_speed:
+            self._approach_frames += 1
+            self._last_approach_at = now
+
+        # 最後に速く近づいた時点から一定時間だけ履歴を保持し、その間に接触・停止を確認する。
+        if self._last_approach_at is not None and now - self._last_approach_at > self._approach_hold_seconds:
+            self._reset_motion()
+
         is_close_enough = current_distance <= self._contact_distance
         is_stopped = abs(closing_speed) <= self._stop_speed
         has_approached = self._approach_frames >= 2
-        if has_approached and is_close_enough and is_stopped:
+        if has_approached and is_close_enough:
+            self._has_been_close = True
+
+        is_separating_after_close = self._has_been_close and closing_speed <= -self._rebound_speed
+        is_contact_stopped = is_close_enough and is_stopped
+        if has_approached and (is_contact_stopped or is_separating_after_close):
             self._cooldown_until = now + self._cooldown_seconds
             self._update_details(
                 left_palm,
@@ -84,16 +104,6 @@ class ClapDetector:
             )
             self._reset_motion()
             return True
-
-        if closing_speed >= self._approach_speed:
-            self._approach_frames += 1
-            if self._approach_started_at is None:
-                self._approach_started_at = now
-        elif closing_speed < 0:
-            self._reset_motion()
-
-        if self._approach_started_at is not None and now - self._approach_started_at > 0.75:
-            self._reset_motion()
 
         self._update_details(left_palm, right_palm, shoulder_width, current_distance, closing_speed, now)
         return False
@@ -124,11 +134,14 @@ class ClapDetector:
             "closingSpeed": closing_speed,
             "approachFrames": self._approach_frames,
             "approachSpeedThreshold": self._approach_speed,
+            "approachHoldSeconds": self._approach_hold_seconds,
             "contactDistanceThreshold": self._contact_distance,
             "stopSpeedThreshold": self._stop_speed,
+            "reboundSpeedThreshold": self._rebound_speed,
             "hasApproached": self._approach_frames >= 2,
             "isCloseEnough": normalized_distance <= self._contact_distance,
             "isStopped": closing_speed is not None and abs(closing_speed) <= self._stop_speed,
+            "isSeparatingAfterClose": self._has_been_close and closing_speed is not None and closing_speed <= -self._rebound_speed,
             "isCoolingDown": now < self._cooldown_until,
             "triggered": triggered,
         }
@@ -144,11 +157,14 @@ class ClapDetector:
             "closingSpeed": None,
             "approachFrames": 0,
             "approachSpeedThreshold": 0.4,
+            "approachHoldSeconds": 1.0,
             "contactDistanceThreshold": 0.35,
             "stopSpeedThreshold": 0.15,
+            "reboundSpeedThreshold": 0.15,
             "hasApproached": False,
             "isCloseEnough": False,
             "isStopped": False,
+            "isSeparatingAfterClose": False,
             "isCoolingDown": False,
             "triggered": False,
         }
@@ -159,4 +175,5 @@ class ClapDetector:
 
     def _reset_motion(self):
         self._approach_frames = 0
-        self._approach_started_at = None
+        self._last_approach_at = None
+        self._has_been_close = False

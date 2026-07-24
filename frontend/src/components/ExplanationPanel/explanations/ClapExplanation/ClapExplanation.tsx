@@ -16,11 +16,13 @@ type ClapDetails = {
   closingSpeed: number | null
   approachFrames: number
   approachSpeedThreshold: number
+  approachHoldSeconds: number
   contactDistanceThreshold: number
   stopSpeedThreshold: number
   hasApproached: boolean
   isCloseEnough: boolean
   isStopped: boolean
+  isSeparatingAfterClose: boolean
   isCoolingDown: boolean
   triggered: boolean
 }
@@ -93,11 +95,13 @@ function getClapDetails(detectionData: ExplanationProps['detectionData']): ClapD
     closingSpeed: details.closingSpeed,
     approachFrames: details.approachFrames,
     approachSpeedThreshold: details.approachSpeedThreshold,
+    approachHoldSeconds: typeof details.approachHoldSeconds === 'number' ? details.approachHoldSeconds : 1.0,
     contactDistanceThreshold: details.contactDistanceThreshold,
     stopSpeedThreshold: details.stopSpeedThreshold,
     hasApproached: details.hasApproached,
     isCloseEnough: details.isCloseEnough,
     isStopped: details.isStopped,
+    isSeparatingAfterClose: details.isSeparatingAfterClose === true,
     isCoolingDown: details.isCoolingDown,
     triggered: details.triggered,
   }
@@ -172,6 +176,7 @@ export function ClapExplanation({ detectionData }: ExplanationProps) {
       }
     : null
   const clapDetected = isClapDetected(detectionData)
+  const backendHasApproached = details?.hasApproached === true
   const resultText = details?.triggered ? 'たたく！' : details?.isCoolingDown ? '判定後の待機中' : '動きを検出中'
 
   useEffect(() => {
@@ -199,7 +204,7 @@ export function ClapExplanation({ detectionData }: ExplanationProps) {
 
   return (
     <section className="clap-explanation" aria-label="たたく動作の判定過程">
-      <p className="clap-explanation__lead">手のひら中心の動きで、たたく動作を判定します</p>
+      <p className="clap-explanation__lead">手のひらが近づき、近い位置で動きが止まる流れで、たたく動作を判定します</p>
 
       <div className="clap-explanation__visualization">
         {visualization !== null ? (
@@ -232,9 +237,9 @@ export function ClapExplanation({ detectionData }: ExplanationProps) {
 
       <ol className="clap-explanation__conditions">
         <ConditionStep
-          passed={isClapVisible || details?.hasApproached === true}
-          title="手のひらが近づいている"
-          value={`速度 ${formatValue(details?.closingSpeed ?? null)}（${formatValue(details?.approachSpeedThreshold ?? null)} 以上を2フレーム）`}
+          passed={isClapVisible || backendHasApproached}
+          title="手のひらが近づいた"
+          value={`速度 ${formatValue(details?.closingSpeed ?? null)}（${formatValue(details?.approachSpeedThreshold ?? null)} 以上を2フレーム。${formatValue(details?.approachHoldSeconds ?? null, 2)}秒保持）`}
         />
         <ConditionStep
           passed={isClapVisible || details?.isCloseEnough === true}
@@ -242,9 +247,11 @@ export function ClapExplanation({ detectionData }: ExplanationProps) {
           value={`距離 ${formatValue(details?.normalizedDistance ?? null)} / ${formatValue(details?.contactDistanceThreshold ?? null)}`}
         />
         <ConditionStep
-          passed={isClapVisible || details?.isStopped === true}
-          title="当たった位置で止まった"
-          value={`速度 ${formatValue(details?.closingSpeed ?? null)} / ${formatValue(details?.stopSpeedThreshold ?? null)}`}
+          passed={isClapVisible || details?.isStopped === true || details?.isSeparatingAfterClose === true}
+          title="近い位置で止まった、または跳ね返った"
+          value={details?.isSeparatingAfterClose
+            ? '近い位置から手が離れ始めた'
+            : `速度 ${formatValue(details?.closingSpeed ?? null)} / ${formatValue(details?.stopSpeedThreshold ?? null)}`}
         />
       </ol>
 
