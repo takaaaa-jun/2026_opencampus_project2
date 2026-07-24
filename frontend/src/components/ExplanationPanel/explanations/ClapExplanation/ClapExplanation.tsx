@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from 'react'
 import type { ExplanationProps } from '../../types'
 import './ClapExplanation.css'
 
@@ -26,6 +27,7 @@ type ClapDetails = {
 
 const LEFT_PALM_POINTS = [15, 17, 19, 21]
 const RIGHT_PALM_POINTS = [16, 18, 20, 22]
+const CLAP_DISPLAY_DURATION_MS = 1500
 
 function isPoint(value: unknown): value is Point {
   if (typeof value !== 'object' || value === null) {
@@ -139,7 +141,18 @@ function formatValue(value: number | null, digits = 3) {
   return value === null ? '—' : value.toFixed(digits)
 }
 
+function isClapDetected(detectionData: ExplanationProps['detectionData']) {
+  if (detectionData === null || typeof detectionData.actions !== 'object' || detectionData.actions === null) {
+    return false
+  }
+
+  return (detectionData.actions as Record<string, unknown>).clap === true
+}
+
 export function ClapExplanation({ detectionData }: ExplanationProps) {
+  const [isClapVisible, setIsClapVisible] = useState(false)
+  const canShowNextClapRef = useRef(true)
+  const clapTimerRef = useRef<number | null>(null)
   const landmarks = getPoseLandmarks(detectionData)
   const details = getClapDetails(detectionData)
   const leftShoulder = landmarks[11]
@@ -158,7 +171,31 @@ export function ClapExplanation({ detectionData }: ExplanationProps) {
         rightPalmCenter: details.rightPalmCenter,
       }
     : null
+  const clapDetected = isClapDetected(detectionData)
   const resultText = details?.triggered ? 'たたく！' : details?.isCoolingDown ? '判定後の待機中' : '動きを検出中'
+
+  useEffect(() => {
+    if (!clapDetected && !isClapVisible) {
+      canShowNextClapRef.current = true
+    }
+
+    if (!clapDetected || isClapVisible || !canShowNextClapRef.current) {
+      return
+    }
+
+    canShowNextClapRef.current = false
+    setIsClapVisible(true)
+    clapTimerRef.current = window.setTimeout(() => {
+      clapTimerRef.current = null
+      setIsClapVisible(false)
+    }, CLAP_DISPLAY_DURATION_MS)
+  }, [clapDetected, isClapVisible])
+
+  useEffect(() => () => {
+    if (clapTimerRef.current !== null) {
+      window.clearTimeout(clapTimerRef.current)
+    }
+  }, [])
 
   return (
     <section className="clap-explanation" aria-label="たたく動作の判定過程">
@@ -190,26 +227,22 @@ export function ClapExplanation({ detectionData }: ExplanationProps) {
         ) : (
           <p className="clap-explanation__waiting">肩と両手が映るように、少し離れて立ってね</p>
         )}
-      </div>
-
-      <div className="clap-explanation__metrics">
-        <div><span>肩幅</span><strong>{formatValue(details?.shoulderWidth ?? null)}</strong></div>
-        <div><span>正規化した距離</span><strong>{formatValue(details?.normalizedDistance ?? null)}</strong></div>
+        {isClapVisible ? <p className="clap-explanation__detected" role="status">CLAP</p> : null}
       </div>
 
       <ol className="clap-explanation__conditions">
         <ConditionStep
-          passed={details?.hasApproached === true}
+          passed={isClapVisible || details?.hasApproached === true}
           title="手のひらが近づいている"
           value={`速度 ${formatValue(details?.closingSpeed ?? null)}（${formatValue(details?.approachSpeedThreshold ?? null)} 以上を2フレーム）`}
         />
         <ConditionStep
-          passed={details?.isCloseEnough === true}
+          passed={isClapVisible || details?.isCloseEnough === true}
           title="十分に近い"
           value={`距離 ${formatValue(details?.normalizedDistance ?? null)} / ${formatValue(details?.contactDistanceThreshold ?? null)}`}
         />
         <ConditionStep
-          passed={details?.isStopped === true}
+          passed={isClapVisible || details?.isStopped === true}
           title="当たった位置で止まった"
           value={`速度 ${formatValue(details?.closingSpeed ?? null)} / ${formatValue(details?.stopSpeedThreshold ?? null)}`}
         />
