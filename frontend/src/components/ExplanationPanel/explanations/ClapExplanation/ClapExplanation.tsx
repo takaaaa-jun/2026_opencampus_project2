@@ -11,14 +11,6 @@ type ClapDetails = {
   isPoseAvailable: boolean
   leftPalmCenter: Point | null
   rightPalmCenter: Point | null
-  shoulderWidth: number | null
-  normalizedDistance: number | null
-  closingSpeed: number | null
-  approachFrames: number
-  approachSpeedThreshold: number
-  approachHoldSeconds: number
-  contactDistanceThreshold: number
-  stopSpeedThreshold: number
   hasApproached: boolean
   isCloseEnough: boolean
   isStopped: boolean
@@ -27,9 +19,74 @@ type ClapDetails = {
   triggered: boolean
 }
 
+type ConditionId = 'approach' | 'distance' | 'contact'
+
+type ConditionDetail = {
+  title: string
+  summary: string
+  code: string
+}
+
 const LEFT_PALM_POINTS = [15, 17, 19, 21]
 const RIGHT_PALM_POINTS = [16, 18, 20, 22]
 const CLAP_DISPLAY_DURATION_MS = 1500
+const CONDITION_DETAILS: Record<ConditionId, ConditionDetail> = {
+  approach: {
+    title: '手のひらが近づいた',
+    summary: '前のフレームと今のフレームを比べて、左右の手のひら中心どうしが近づいたかを見ます。',
+    code: `# MediaPipe Poseが検出した33個の骨格点
+landmarks = pose_results.pose_landmarks.landmark
+
+# 左右4点の平均を、手のひら中心にする
+left_palm = average(landmarks[15], landmarks[17],
+                    landmarks[19], landmarks[21])
+right_palm = average(landmarks[16], landmarks[18],
+                     landmarks[20], landmarks[22])
+
+current_distance = distance_between(left_palm, right_palm)
+
+# 前フレームと比べて、近づく速さを計算する
+elapsed = now - previous_time
+closing_speed = (previous_distance - current_distance) / elapsed
+
+# 次のフレームで使う値を保存する
+previous_distance = current_distance
+previous_time = now
+
+if closing_speed >= APPROACH_SPEED:
+    approach_frames += 1
+
+has_approached = approach_frames >= 2`,
+  },
+  distance: {
+    title: '十分に近い',
+    summary: '手のひら中心どうしの距離が近いかを、体の大きさに合わせて確かめます。',
+    code: `# 手のひら中心は「近づいた」の条件で計算済み
+palm_distance = distance_between(left_palm, right_palm)
+
+# MediaPipeの肩の骨格点（11番・12番）を使う
+shoulder_width = distance_between(landmarks[11], landmarks[12])
+
+# 体の大きさによらず比べられる距離にする
+normalized_distance = palm_distance / shoulder_width
+
+is_close_enough = normalized_distance <= CONTACT_DISTANCE`,
+  },
+  contact: {
+    title: '近い位置で止まった、または跳ね返った',
+    summary: '手が当たると動きは小さくなるか、すぐに離れる向きへ変わります。',
+    code: `# closing_speed は前フレームとの差から計算済み
+is_stopped = abs(closing_speed) <= STOP_SPEED
+
+# 近づいたあと、離れる向きに変わったか
+is_separating = has_been_close and \\
+                 closing_speed <= -REBOUND_SPEED
+
+if has_approached and is_close_enough and \\
+   (is_stopped or is_separating):
+    clap = True`,
+  },
+}
 
 function isPoint(value: unknown): value is Point {
   if (typeof value !== 'object' || value === null) {
@@ -38,10 +95,6 @@ function isPoint(value: unknown): value is Point {
 
   const point = value as Record<string, unknown>
   return typeof point.x === 'number' && typeof point.y === 'number'
-}
-
-function isNumberOrNull(value: unknown): value is number | null {
-  return typeof value === 'number' || value === null
 }
 
 function getPoseLandmarks(detectionData: ExplanationProps['detectionData']): Array<Point | null> {
@@ -70,13 +123,6 @@ function getClapDetails(detectionData: ExplanationProps['detectionData']): ClapD
   const details = clap as Record<string, unknown>
   if (
     typeof details.isPoseAvailable !== 'boolean' ||
-    !isNumberOrNull(details.shoulderWidth) ||
-    !isNumberOrNull(details.normalizedDistance) ||
-    !isNumberOrNull(details.closingSpeed) ||
-    typeof details.approachFrames !== 'number' ||
-    typeof details.approachSpeedThreshold !== 'number' ||
-    typeof details.contactDistanceThreshold !== 'number' ||
-    typeof details.stopSpeedThreshold !== 'number' ||
     typeof details.hasApproached !== 'boolean' ||
     typeof details.isCloseEnough !== 'boolean' ||
     typeof details.isStopped !== 'boolean' ||
@@ -90,14 +136,6 @@ function getClapDetails(detectionData: ExplanationProps['detectionData']): ClapD
     isPoseAvailable: details.isPoseAvailable,
     leftPalmCenter: isPoint(details.leftPalmCenter) ? details.leftPalmCenter : null,
     rightPalmCenter: isPoint(details.rightPalmCenter) ? details.rightPalmCenter : null,
-    shoulderWidth: details.shoulderWidth,
-    normalizedDistance: details.normalizedDistance,
-    closingSpeed: details.closingSpeed,
-    approachFrames: details.approachFrames,
-    approachSpeedThreshold: details.approachSpeedThreshold,
-    approachHoldSeconds: typeof details.approachHoldSeconds === 'number' ? details.approachHoldSeconds : 1.0,
-    contactDistanceThreshold: details.contactDistanceThreshold,
-    stopSpeedThreshold: details.stopSpeedThreshold,
     hasApproached: details.hasApproached,
     isCloseEnough: details.isCloseEnough,
     isStopped: details.isStopped,
@@ -129,20 +167,74 @@ function LandmarkGroup({ landmarks, indices, color }: { landmarks: Array<Point |
   )
 }
 
-function ConditionStep({ passed, title, value }: { passed: boolean; title: string; value: string }) {
+function ConditionStep({
+  condition,
+  passed,
+  title,
+  selected,
+  onSelect,
+}: {
+  condition: ConditionId
+  passed: boolean
+  title: string
+  selected: boolean
+  onSelect: (condition: ConditionId) => void
+}) {
   return (
-    <li className={passed ? 'is-passed' : ''}>
-      <span aria-hidden="true">{passed ? '✓' : '○'}</span>
-      <div>
+    <li className={`${passed ? 'is-passed' : ''}${selected ? ' is-selected' : ''}`}>
+      <button type="button" onClick={() => onSelect(condition)} aria-pressed={selected}>
+        <span aria-hidden="true">{passed ? '✓' : '○'}</span>
         <strong>{title}</strong>
-        <small>{value}</small>
-      </div>
+        <span className="clap-explanation__condition-action" aria-hidden="true">詳しく見る</span>
+      </button>
     </li>
   )
 }
 
-function formatValue(value: number | null, digits = 3) {
-  return value === null ? '—' : value.toFixed(digits)
+function highlightCode(code: string) {
+  const tokenPattern = /(\b(?:if|and|or|is|not|None|True|False)\b|\b(?:average|distance_between|abs)\b|\b[A-Z][A-Z_]+\b|\b\d+(?:\.\d+)?\b)/g
+
+  return code.split('\n').map((line, lineIndex) => (
+    <span className="clap-explanation__code-line" key={`${line}-${lineIndex}`}>
+      {line.split(tokenPattern).map((part, partIndex) => {
+        if (/^(if|and|or|is|not|None|True|False)$/.test(part)) {
+          return <span className="clap-explanation__code-token is-keyword" key={partIndex}>{part}</span>
+        }
+
+        if (/^(average|distance_between|abs)$/.test(part)) {
+          return <span className="clap-explanation__code-token is-function" key={partIndex}>{part}</span>
+        }
+
+        if (/^[A-Z][A-Z_]+$/.test(part)) {
+          return <span className="clap-explanation__code-token is-constant" key={partIndex}>{part}</span>
+        }
+
+        if (/^\d+(?:\.\d+)?$/.test(part)) {
+          return <span className="clap-explanation__code-token is-number" key={partIndex}>{part}</span>
+        }
+
+        return part
+      })}
+      {lineIndex < code.split('\n').length - 1 ? '\n' : null}
+    </span>
+  ))
+}
+
+function ConditionDetailPanel({ condition, onClose }: { condition: ConditionId; onClose: () => void }) {
+  const detail = CONDITION_DETAILS[condition]
+
+  return (
+    <section className="clap-explanation__detail" aria-label={`${detail.title}の詳細`} onClick={(event) => event.stopPropagation()}>
+      <div className="clap-explanation__detail-heading">
+        <div>
+          <h2>{detail.title}</h2>
+        </div>
+        <button type="button" onClick={onClose}>閉じる</button>
+      </div>
+      <p className="clap-explanation__detail-summary">{detail.summary}</p>
+      <pre className="clap-explanation__code-example"><code>{highlightCode(detail.code)}</code></pre>
+    </section>
+  )
 }
 
 function isClapDetected(detectionData: ExplanationProps['detectionData']) {
@@ -155,6 +247,7 @@ function isClapDetected(detectionData: ExplanationProps['detectionData']) {
 
 export function ClapExplanation({ detectionData }: ExplanationProps) {
   const [isClapVisible, setIsClapVisible] = useState(false)
+  const [selectedCondition, setSelectedCondition] = useState<ConditionId | null>(null)
   const canShowNextClapRef = useRef(true)
   const clapTimerRef = useRef<number | null>(null)
   const landmarks = getPoseLandmarks(detectionData)
@@ -235,23 +328,33 @@ export function ClapExplanation({ detectionData }: ExplanationProps) {
         {isClapVisible ? <p className="clap-explanation__detected" role="status">CLAP</p> : null}
       </div>
 
+      {selectedCondition !== null ? (
+        <div className="clap-explanation__detail-overlay" role="dialog" aria-label="拍手の判定方法の詳細" onClick={() => setSelectedCondition(null)}>
+          <ConditionDetailPanel condition={selectedCondition} onClose={() => setSelectedCondition(null)} />
+        </div>
+      ) : null}
+
       <ol className="clap-explanation__conditions">
         <ConditionStep
+          condition="approach"
           passed={isClapVisible || backendHasApproached}
           title="手のひらが近づいた"
-          value={`速度 ${formatValue(details?.closingSpeed ?? null)}（${formatValue(details?.approachSpeedThreshold ?? null)} 以上を2フレーム。${formatValue(details?.approachHoldSeconds ?? null, 2)}秒保持）`}
+          selected={selectedCondition === 'approach'}
+          onSelect={(condition) => setSelectedCondition((current) => current === condition ? null : condition)}
         />
         <ConditionStep
+          condition="distance"
           passed={isClapVisible || details?.isCloseEnough === true}
           title="十分に近い"
-          value={`距離 ${formatValue(details?.normalizedDistance ?? null)} / ${formatValue(details?.contactDistanceThreshold ?? null)}`}
+          selected={selectedCondition === 'distance'}
+          onSelect={(condition) => setSelectedCondition((current) => current === condition ? null : condition)}
         />
         <ConditionStep
+          condition="contact"
           passed={isClapVisible || details?.isStopped === true || details?.isSeparatingAfterClose === true}
           title="近い位置で止まった、または跳ね返った"
-          value={details?.isSeparatingAfterClose
-            ? '近い位置から手が離れ始めた'
-            : `速度 ${formatValue(details?.closingSpeed ?? null)} / ${formatValue(details?.stopSpeedThreshold ?? null)}`}
+          selected={selectedCondition === 'contact'}
+          onSelect={(condition) => setSelectedCondition((current) => current === condition ? null : condition)}
         />
       </ol>
 
