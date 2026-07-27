@@ -1,1 +1,442 @@
-/* ふりおろし動作の解説専用スタイル */
+.swing {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  color: #1f2937;
+}
+
+.swing--compact {
+  padding-top: 0;
+}
+
+.swing-emptyState {
+  border: 1px solid #dbe4ff;
+  border-radius: 18px;
+  padding: 12px 16px;
+  background: linear-gradient(180deg, #f8fbff 0%, #ffffff 100%);
+}
+
+.swing-emptyState h3 {
+  margin: 0 0 6px;
+  font-size: 17px;
+}
+
+.swing-emptyState p {
+  margin: 0;
+  color: #52607a;
+  line-height: 1.45;
+  font-size: 13px;
+}
+
+.swing-hero {
+  display: grid;
+  grid-template-columns: 48px 1fr;
+  gap: 10px;
+  align-items: center;
+  border: 1px solid #dbe4ff;
+  border-radius: 18px;
+  padding: 8px 12px;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+}
+
+.swing-hero--ok {
+  border-color: #c9e9cf;
+  background: linear-gradient(180deg, #f4fff5 0%, #ffffff 100%);
+}
+
+.swing-hero--ng {
+  border-color: #f1d0d0;
+  background: linear-gradient(180deg, #fff6f6 0%, #ffffff 100%);
+}
+
+.swing-hero__icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  font-size: 24px;
+  font-weight: 800;
+  color: #ffffff;
+  background: #60a5fa;
+}
+
+.swing-hero--ok .swing-hero__icon {
+  background: #22c55e;
+}
+
+.swing-hero--ng .swing-hero__icon {
+  background: #ef4444;
+}
+
+.swing-hero__content h3 {
+  margin: 0;
+  font-size: 17px;
+  line-height: 1.2;
+}
+
+.swing-hero__content p {
+  margin: 4px 0 0;
+  color: #64748b;
+  font-size: 12px;
+}
+
+.swing-chartCard {
+  border: 1px solid #e5eefc;
+  border-radius: 18px;
+  background: #ffffff;
+  overflow: hidden;
+  box-shadow: 0 8px 20px rgba(43, 73, 137, 0.05);
+}
+
+.swing-chartCard__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px 0;
+}
+
+.swing-chartCard__header h4 {
+  margin: 0;
+  font-size: 15px;
+}
+
+.swing-chartCard__header p {
+  margin: 4px 0 0;
+  color: #64748b;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.swing-samplePill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 108px;
+  padding: 5px 9px;
+  border-radius: 999px;
+  color: #1d4ed8;
+  background: #dbeafe;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.swing-chart {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.swing-phaseArea {
+  opacity: 0.2;
+}
+
+.swing-phaseArea--top {
+  fill: #60a5fa;
+}
+
+.swing-phaseArea--middle {
+  fill: #f59e0b;
+}
+
+.swing-phaseArea--bottom {
+  fill: #22c55e;
+}
+
+.swing-chart__gridLine {
+  stroke: #e2e8f0;
+  stroke-width: 1;
+}
+
+.swing-chart__axis {
+  stroke: #94a3b8;
+  stroke-width: 1.2;
+}
+
+.swing-chart__line {
+  fill: none;
+  stroke: #2563eb;
+  stroke-width: 4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.swing-chart__point {
+  fill: #2563eb;
+  stroke: #ffffff;
+  stroke-width: 2;
+}
+
+.swing-chart__axisLabel {
+  fill: #64748b;
+  font-size: 10px;
+  text-anchor: end;
+}
+
+.swing-chart__frameLabel {
+  fill: #475569;
+  font-size: 10px;
+  font-weight: 700;
+  text-anchor: middle;
+}
+
+.swing-chart__titleLabel {
+  fill: #64748b;
+  font-size: 10px;
+  text-anchor: middle;
+}
+
+.swing-chartLegend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 0 12px 12px;
+}
+
+.swing-chartLegend__item {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 9px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.swing-chartLegend__item--top {
+  color: #1d4ed8;
+  background: #dbeafe;
+}
+
+.swing-chartLegend__item--middle {
+  color: #9a3412;
+  background: #ffedd5;
+}
+
+.swing-chartLegend__item--bottom {
+  color: #166534;
+  background: #dcfce7;
+}
+
+.swing-phaseGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.swing-phaseCard {
+  border: 1px solid #e5eefc;
+  border-radius: 18px;
+  padding: 10px 12px;
+  background: #ffffff;
+}
+
+.swing-phaseCard--top {
+  border-top: 4px solid #60a5fa;
+}
+
+.swing-phaseCard--middle {
+  border-top: 4px solid #f59e0b;
+}
+
+.swing-phaseCard--bottom {
+  border-top: 4px solid #22c55e;
+}
+
+.swing-phaseCard__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.swing-phaseCard__header h4 {
+  margin: 0;
+  font-size: 13px;
+}
+
+.swing-phaseCard__header span {
+  color: #64748b;
+  font-size: 10px;
+}
+
+.swing-phaseCard strong {
+  display: block;
+  margin-top: 7px;
+  color: #0f172a;
+  font-size: 22px;
+}
+
+.swing-phaseCard p {
+  margin: 2px 0 0;
+  color: #64748b;
+  font-size: 11px;
+}
+
+.swing-metrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  align-items: start;
+}
+
+.swing-metricCard {
+  border: 1px solid #e5eefc;
+  border-radius: 18px;
+  padding: 9px 12px 10px;
+  background: #ffffff;
+}
+
+.swing-metricCard__title {
+  margin-bottom: 7px;
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.swing-barRow {
+  display: grid;
+  grid-template-columns: 70px 1fr auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.swing-barValue {
+  color: #0f172a;
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.swing-barLimit {
+  color: #64748b;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.swing-bar {
+  position: relative;
+  height: 10px;
+  border-radius: 999px;
+  background: #edf2f7;
+  overflow: hidden;
+}
+
+.swing-bar__fill {
+  height: 100%;
+  border-radius: inherit;
+  transition: width 180ms ease;
+}
+
+.swing-bar__fill.is-progress {
+  background: linear-gradient(90deg, #93c5fd 0%, #2563eb 100%);
+}
+
+.swing-bar__fill.is-ok {
+  background: linear-gradient(90deg, #86efac 0%, #22c55e 100%);
+}
+
+.swing-bar__fill.is-ng {
+  background: linear-gradient(90deg, #fda4af 0%, #ef4444 100%);
+}
+
+.swing-bar__threshold {
+  position: absolute;
+  top: -3px;
+  width: 2px;
+  height: 16px;
+  background: #0f172a;
+  opacity: 0.45;
+}
+
+.swing-conditionRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.swing-conditionRow strong {
+  color: #0f172a;
+  font-size: 13px;
+  text-align: right;
+}
+
+.swing-conditionChip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 82px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.swing-conditionChip.is-ok {
+  color: #166534;
+  background: #dcfce7;
+}
+
+.swing-conditionChip.is-ng {
+  color: #991b1b;
+  background: #fee2e2;
+}
+
+.swing-summaryRow {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 10px;
+  align-items: center;
+}
+
+.swing-summaryRow strong {
+  display: block;
+  color: #0f172a;
+  font-size: 13px;
+}
+
+.swing-summaryRow p {
+  margin: 3px 0 0;
+  color: #64748b;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+@media (max-width: 1024px) {
+  .swing-phaseGrid,
+  .swing-metrics {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .swing-hero {
+    grid-template-columns: 1fr;
+    justify-items: start;
+  }
+
+  .swing-chartCard__header {
+    flex-direction: column;
+  }
+
+  .swing-phaseGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .swing-barRow {
+    grid-template-columns: 1fr;
+  }
+
+  .swing-barLimit {
+    white-space: normal;
+  }
+
+  .swing-conditionRow {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .swing-conditionRow strong {
+    text-align: left;
+  }
+}
