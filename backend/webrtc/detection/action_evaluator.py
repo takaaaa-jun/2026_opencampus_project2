@@ -40,6 +40,7 @@ class ActionEvaluator:
             actions["clap"] = self._action.judge_clap(pose_coordinates)
         else:
             self._action.reset_clap()
+            self._action.reset_swing()
 
         hands = hands_results.multi_hand_landmarks or []
         if hands:
@@ -50,4 +51,5 @@ class ActionEvaluator:
 
         action_details = {action_id: {} for action_id in actions}
         action_details["clap"] = self._action.clap_details
+        action_details["swing"] = self._action.swing_details
         return actions, action_details

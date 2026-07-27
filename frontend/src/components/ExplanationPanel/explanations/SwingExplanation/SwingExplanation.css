@@ -1,1 +1,325 @@
-/* ふりおろし動作の解説専用スタイル */
+.swing-explanation {
+  display: grid;
+  gap: 20px;
+}
+
+.swing-explanation__lead {
+  margin: 0;
+  color: #334155;
+  font-weight: 700;
+}
+
+.swing-explanation__visualization {
+  position: relative;
+  display: grid;
+  min-height: 340px;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid #cbd5e1;
+  background: #f8fafc;
+}
+
+.swing-explanation__visualization svg {
+  width: 100%;
+  height: 340px;
+}
+
+.swing-explanation__shoulder-line {
+  stroke: #64748b;
+  stroke-width: 0.012;
+  stroke-dasharray: 0.024 0.016;
+}
+
+.swing-explanation__shoulder-point {
+  fill: #64748b;
+  stroke: #fff;
+  stroke-width: 0.005;
+}
+
+.swing-explanation__limb-line {
+  stroke: #94a3b8;
+  stroke-width: 0.01;
+  stroke-linecap: round;
+}
+
+.swing-explanation__trail-point {
+  transition: all 100ms ease;
+}
+
+.swing-explanation__current-center {
+  fill: none;
+  stroke: #10b981;
+  stroke-width: 0.006;
+  stroke-dasharray: 0.01 0.01;
+}
+
+.swing-explanation__center-label {
+  fill: #0f172a;
+  font-weight: 700;
+  text-anchor: middle;
+}
+
+.swing-explanation__waiting {
+  margin: 0;
+  padding: 24px;
+  color: #475569;
+  font-weight: 700;
+  text-align: center;
+}
+
+.swing-explanation__detail {
+  display: grid;
+  align-content: start;
+  gap: 16px;
+  width: min(100%, 760px);
+  max-height: min(760px, calc(100dvh - 48px));
+  padding: 28px;
+  overflow: auto;
+  border-radius: 20px;
+  color: #1e293b;
+  background: #fff;
+  box-shadow: 0 24px 80px rgb(15 23 42 / 28%);
+}
+
+.swing-explanation__detail-overlay {
+  position: absolute;
+  z-index: 20;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: transparent;
+  animation: swing-explanation-overlay-in 160ms ease-out;
+}
+
+@keyframes swing-explanation-overlay-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.swing-explanation__detail-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: start;
+}
+
+.swing-explanation__detail-heading h2 {
+  margin: 0;
+  color: #0f172a;
+  font-size: 1.35rem;
+}
+
+.swing-explanation__detail-heading button {
+  padding: 8px 12px;
+  border: 1px solid #94a3b8;
+  border-radius: 999px;
+  color: #334155;
+  background: #fff;
+  font: inherit;
+  cursor: pointer;
+}
+
+.swing-explanation__detail-summary {
+  margin: 0;
+  line-height: 1.7;
+}
+
+.swing-explanation__code-example {
+  margin: 0;
+  padding: 18px;
+  overflow-x: auto;
+  border-radius: 12px;
+  color: #e2e8f0;
+  background: #0f172a;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: clamp(0.74rem, 1.2vw, 0.92rem);
+  line-height: 1.65;
+  tab-size: 2;
+}
+
+.swing-explanation__code-line {
+  display: block;
+  min-height: 1.65em;
+}
+
+.swing-explanation__code-token.is-keyword {
+  color: #f472b6;
+  font-weight: 700;
+}
+
+.swing-explanation__code-token.is-function {
+  color: #67e8f9;
+}
+
+.swing-explanation__code-token.is-constant {
+  color: #fbbf24;
+}
+
+.swing-explanation__code-token.is-number {
+  color: #c4b5fd;
+}
+
+.swing-explanation__detected {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  margin: 0;
+  color: #10b981;
+  font-size: clamp(4rem, 14vw, 9rem);
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  line-height: 1;
+  pointer-events: none;
+  text-shadow: 0 3px 0 #fff, 0 0 18px rgb(16 185 129 / 45%);
+  animation: swing-explanation-pop 180ms ease-out;
+}
+
+@keyframes swing-explanation-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.65);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.swing-explanation__stats-panel {
+  padding: 16px;
+  border: 1px solid #cbd5e1;
+  border-radius: 12px;
+  background: #f8fafc;
+}
+
+.swing-explanation__stats-panel h3 {
+  margin: 0 0 12px;
+  color: #1e293b;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.swing-explanation__stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 12px;
+}
+
+.swing-explanation__stat-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+}
+
+.swing-explanation__stat-item.highlight {
+  border-color: #86efac;
+  background: #f0fdf4;
+}
+
+.swing-explanation__stat-item .label {
+  color: #64748b;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.swing-explanation__stat-item .value {
+  color: #0f172a;
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+
+.swing-explanation__stat-item.highlight .value {
+  color: #16a34a;
+}
+
+.swing-explanation__conditions {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.swing-explanation__conditions li {
+  border: 1px solid #cbd5e1;
+  color: #64748b;
+}
+
+.swing-explanation__conditions li.is-passed {
+  border-color: #86efac;
+  background: #f0fdf4;
+  color: #15803d;
+}
+
+.swing-explanation__conditions button {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  width: 100%;
+  padding: 12px;
+  border: 0;
+  color: inherit;
+  background: transparent;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.swing-explanation__conditions button > span:first-child {
+  font-size: 1.25rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+.swing-explanation__conditions strong {
+  color: #334155;
+}
+
+.swing-explanation__conditions li.is-selected {
+  border-color: #0284c7;
+  box-shadow: 0 0 0 2px rgb(14 165 233 / 18%);
+}
+
+.swing-explanation__condition-action {
+  color: #0369a1;
+  font-size: 0.8rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.swing-explanation__warning-text {
+  margin: 0;
+  color: #dc2626;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-align: center;
+}
+
+.swing-explanation__result {
+  margin: 0;
+  padding: 12px;
+  background: #e2e8f0;
+  color: #334155;
+  font-weight: 700;
+  text-align: center;
+}
+
+.swing-explanation__result.is-triggered {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+@media (max-width: 800px) {
+  .swing-explanation__visualization,
+  .swing-explanation__visualization svg {
+    min-height: 260px;
+    height: 260px;
+  }
+}

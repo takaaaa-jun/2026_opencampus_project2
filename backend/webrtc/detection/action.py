@@ -29,6 +29,10 @@ class action:
         return self._swing.frames
 
     @property
+    def swing_details(self):
+        return self._swing.details
+
+    @property
     def message(self):
         return self._message
 
@@ -74,6 +78,9 @@ class action:
 
     def reset_clap(self):
         self._clap.reset()
+
+    def reset_swing(self):
+        self._swing.reset()
 
     def check_sitting(self, landmarks):
         return pose.is_sitting(landmarks)
