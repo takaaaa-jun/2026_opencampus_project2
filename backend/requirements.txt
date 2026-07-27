@@ -2,6 +2,5 @@ Django>=5.1,<5.2
 aiortc==1.14.0
 numpy>=1.26,<2.0
 django-cors-headers
-# MediaPipe 0.10.21はNumPy 2系に未対応のため、NumPy 1系と組み合わせる。
 opencv-python==4.10.0.84
 mediapipe==0.10.21
