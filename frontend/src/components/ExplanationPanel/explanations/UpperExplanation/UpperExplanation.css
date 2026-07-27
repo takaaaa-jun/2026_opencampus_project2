@@ -1,1 +1,380 @@
-/* アッパーの解説専用スタイル */
+.upperPanel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  color: #1f2937;
+  width: 100%;
+}
+
+.upperIntro {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  width: 100%;
+}
+
+.crossarms-hero {
+  display: grid;
+  grid-template-columns: 48px 1fr;
+  gap: 10px;
+  align-items: center;
+  border: 1px solid #dbe4ff;
+  border-radius: 18px;
+  padding: 8px 12px;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+  width: 100%;
+  box-sizing: border-box;
+  min-width: 0;
+}
+
+.crossarms-hero--ok {
+  border-color: #c9e9cf;
+  background: linear-gradient(180deg, #f4fff5 0%, #ffffff 100%);
+}
+
+.crossarms-hero--ng {
+  border-color: #f1d0d0;
+  background: linear-gradient(180deg, #fff6f6 0%, #ffffff 100%);
+}
+
+.crossarms-hero__icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  font-size: 24px;
+  font-weight: 800;
+  color: #ffffff;
+  background: #60a5fa;
+}
+
+.crossarms-hero--ok .crossarms-hero__icon {
+  background: #22c55e;
+}
+
+.crossarms-hero--ng .crossarms-hero__icon {
+  background: #ef4444;
+}
+
+.crossarms-hero__content h3 {
+  margin: 0;
+  font-size: 17px;
+  line-height: 1.2;
+}
+
+.upperConditions {
+  border: 1px solid #e2ebfb;
+  border-radius: 20px;
+  background: #ffffff;
+  box-shadow: 0 10px 24px rgba(62, 92, 153, 0.06);
+  padding: 12px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.upper-condition {
+  border: 1px solid #e5eefc;
+  border-radius: 18px;
+  background: #ffffff;
+  overflow: hidden;
+}
+
+.upper-condition.is-ok {
+  border-color: #c9e9cf;
+}
+
+.upper-condition.is-ng {
+  border-color: #f1d0d0;
+}
+
+.upper-condition__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px 8px;
+  border-bottom: 1px solid #eef3fb;
+}
+
+.upper-condition__title {
+  font-size: 14px;
+  font-weight: 800;
+  color: #17233a;
+}
+
+.upper-condition__body {
+  padding: 10px 12px 12px;
+}
+
+.upperConditionGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.upperConditionItem {
+  padding: 10px 10px 11px;
+  border-radius: 14px;
+  background: linear-gradient(180deg, #f8fbff 0%, #ffffff 100%);
+  border: 1px solid #eef3fb;
+}
+
+.upperConditionItem__name {
+  font-size: 12px;
+  font-weight: 800;
+  color: #17233a;
+}
+
+.upperConditionItem__value {
+  margin-top: 5px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: #5b6477;
+}
+
+.upperConditionItem__flag {
+  margin-top: 6px;
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.upperConditionItem__flag.is-ok {
+  color: #166534;
+  background: #dcfce7;
+}
+
+.upperConditionItem__flag.is-ng {
+  color: #991b1b;
+  background: #fee2e2;
+}
+
+.upper-miniPill,
+.upper-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.upper-chip--ghost {
+  background: #edf4ff;
+  color: #3162c4;
+}
+
+.upper-miniPill.is-ok,
+.upper-chip.is-ok {
+  color: #166534;
+  background: #dcfce7;
+}
+
+.upper-miniPill.is-ng,
+.upper-chip.is-ng {
+  color: #991b1b;
+  background: #fee2e2;
+}
+
+.upper-chartCard {
+  border: 1px solid #e2ebfb;
+  border-radius: 20px;
+  background: #ffffff;
+  box-shadow: 0 10px 24px rgba(62, 92, 153, 0.06);
+  overflow: hidden;
+}
+
+.upper-chartCard__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px 10px;
+  border-bottom: 1px solid #eef3fb;
+}
+
+.upper-chartCard__title {
+  font-size: 15px;
+  font-weight: 800;
+  color: #17233a;
+}
+
+.upper-chartCard__desc {
+  margin-top: 3px;
+  color: #64748b;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.upper-chartCard__body {
+  padding: 12px 14px 14px;
+}
+
+.upper-chart {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.upper-chart__bg {
+  fill: #fbfdff;
+}
+
+.upper-chart__grid {
+  stroke: #e6edf8;
+  stroke-width: 1;
+}
+
+.upper-chart__axisLabel {
+  fill: #64748b;
+  font-size: 10px;
+  text-anchor: start;
+  dominant-baseline: middle;
+}
+
+.upper-chart__refLine {
+  stroke-dasharray: 8 7;
+  stroke-width: 2.2;
+}
+
+.upper-chart__refLine.is-leftShoulder {
+  stroke: #0ea5e9;
+}
+
+.upper-chart__refLine.is-rightShoulder {
+  stroke: #22c55e;
+}
+
+.upper-chart__refLabel {
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.upper-chart__refLabel.is-leftShoulder {
+  fill: #0284c7;
+}
+
+.upper-chart__refLabel.is-rightShoulder {
+  fill: #15803d;
+}
+
+.upper-chart__line {
+  fill: none;
+  stroke-width: 3.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.upper-chart__line.is-left {
+  stroke: #2563eb;
+}
+
+.upper-chart__line.is-right {
+  stroke: #7c3aed;
+}
+
+.upper-chart__dot {
+  stroke: #ffffff;
+  stroke-width: 2;
+}
+
+.upper-chart__dot.is-left {
+  fill: #2563eb;
+}
+
+.upper-chart__dot.is-right {
+  fill: #7c3aed;
+}
+
+.upper-chart__span {
+  fill: none;
+  stroke-width: 1.4;
+  stroke-dasharray: 4 4;
+  opacity: 0.55;
+}
+
+.upper-chart__span.is-left {
+  stroke: #2563eb;
+}
+
+.upper-chart__span.is-right {
+  stroke: #7c3aed;
+}
+
+.upper-chart__tag {
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.upper-chart__tag.is-left {
+  fill: #2563eb;
+}
+
+.upper-chart__tag.is-right {
+  fill: #7c3aed;
+}
+
+.upper-chart__empty {
+  min-height: 220px;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  padding: 20px;
+}
+
+.upper-chart__emptyTitle {
+  font-size: 14px;
+  font-weight: 800;
+  color: #17233a;
+}
+
+.upper-chart__emptyText {
+  margin-top: 4px;
+  font-size: 12px;
+  line-height: 1.55;
+  color: #64748b;
+}
+
+@media (max-width: 1024px) {
+  .upperConditions {
+    grid-template-columns: 1fr;
+  }
+
+  .upperConditionGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .upperPanel {
+    gap: 8px;
+  }
+
+  .crossarms-hero {
+    grid-template-columns: 1fr;
+    justify-items: start;
+    min-width: 0;
+  }
+
+  .crossarms-hero__icon {
+    width: 44px;
+    height: 44px;
+    font-size: 22px;
+  }
+
+  .crossarms-hero__content h3 {
+    font-size: 16px;
+  }
+
+  .upper-chartCard__head,
+  .upper-condition__head {
+    align-items: flex-start;
+  }
+}
