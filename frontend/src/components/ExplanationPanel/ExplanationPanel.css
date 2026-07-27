@@ -1,4 +1,5 @@
 .explanation-panel {
+  position: relative;
   grid-column: 2;
   display: grid;
   align-content: start;

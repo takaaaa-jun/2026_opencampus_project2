@@ -1,4 +1,4 @@
-"""既存のaction()をWebRTC送信用の動作判定へ接続する。"""
+"""動作判定をWebRTC送信用の動作IDへ対応づける。"""
 
 from __future__ import annotations
 
@@ -6,8 +6,6 @@ from .action import action
 
 
 class ActionEvaluator:
-    """既存の判定ロジックを、送信用の動作名へ対応づける。"""
-
     def __init__(self) -> None:
         self._action = action()
 
@@ -40,12 +38,16 @@ class ActionEvaluator:
             actions["closs"] = bool(self._action.judge_closs_arms(pose_coordinates))
             actions["upper"] = self._action.judge_uppercut(pose_coordinates)
             actions["clap"] = self._action.judge_clap(pose_coordinates)
+        else:
+            self._action.reset_clap()
 
-        if hands_results.multi_hand_landmarks:
-            hands = hands_results.multi_hand_landmarks
+        hands = hands_results.multi_hand_landmarks or []
+        if hands:
             actions["grab"] = any(self._action.judge_grab(hand) for hand in hands)
             if len(hands) == 2:
                 actions["kamehameha"] = bool(self._action.is_kamehameha(hands[0], hands[1]))
                 actions["kamehameha_continue"] = self._action.judge_kamehameha(hands[0], hands[1])
 
-        return actions, {action_id: {} for action_id in actions}
+        action_details = {action_id: {} for action_id in actions}
+        action_details["clap"] = self._action.clap_details
+        return actions, action_details
