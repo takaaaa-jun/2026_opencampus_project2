@@ -63,7 +63,24 @@ class ActionEvaluator:
                     "holdDurationThreshold"
                 ] = 3.0
 
-        action_details = {action_id: {} for action_id in actions}
-        action_details["clap"] = self._action.clap_details
-        action_details["kamehameha"] = kamehameha_details
-        return actions, action_details
+                action_details = {
+                    action_id: {}
+                    for action_id in actions
+                }
+
+                action_details["clap"] = (
+                    self._action.clap_details
+                )
+
+                action_details["kamehameha"] = (
+                    kamehameha_details
+                )
+
+                if pose_results.pose_landmarks:
+                    action_details["tpose"] = (
+                        self._action.get_tpose_details(
+                            pose_results.pose_landmarks.landmark
+                        )
+                    )
+
+                return actions, action_details

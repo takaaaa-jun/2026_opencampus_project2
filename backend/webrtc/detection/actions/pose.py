@@ -20,6 +20,43 @@ def is_tpose(landmarks):
             150 <= angle(right_shoulder, right_elbow, right_wrist) <= 180)
 
 
+def get_tpose_details(landmarks):
+    left_shoulder, right_shoulder = landmarks[11], landmarks[12]
+    left_elbow, right_elbow = landmarks[13], landmarks[14]
+    left_wrist, right_wrist = landmarks[15], landmarks[16]
+    left_hip, right_hip = landmarks[23], landmarks[24]
+
+    left_shoulder_angle = angle(left_elbow, left_shoulder, left_hip)
+    right_shoulder_angle = angle(right_elbow, right_shoulder, right_hip)
+    left_elbow_angle = angle(left_shoulder, left_elbow, left_wrist)
+    right_elbow_angle = angle(right_shoulder, right_elbow, right_wrist)
+
+    is_left_shoulder_ok = 80 <= left_shoulder_angle <= 100
+    is_right_shoulder_ok = 80 <= right_shoulder_angle <= 100
+    is_left_elbow_ok = 150 <= left_elbow_angle <= 180
+    is_right_elbow_ok = 150 <= right_elbow_angle <= 180
+
+    is_pose_valid = (
+        is_left_shoulder_ok
+        and is_right_shoulder_ok
+        and is_left_elbow_ok
+        and is_right_elbow_ok
+    )
+
+    return {
+        "left_shoulder_angle": round(left_shoulder_angle, 1),
+        "right_shoulder_angle": round(right_shoulder_angle, 1),
+        "left_elbow_angle": round(left_elbow_angle, 1),
+        "right_elbow_angle": round(right_elbow_angle, 1),
+        "is_left_shoulder_ok": is_left_shoulder_ok,
+        "is_right_shoulder_ok": is_right_shoulder_ok,
+        "is_left_elbow_ok": is_left_elbow_ok,
+        "is_right_elbow_ok": is_right_elbow_ok,
+        "is_pose_valid": is_pose_valid,
+    }
+
+
+
 def is_surprise(landmarks):
     left_shoulder, right_shoulder = landmarks[11], landmarks[12]
     left_elbow, right_elbow = landmarks[13], landmarks[14]

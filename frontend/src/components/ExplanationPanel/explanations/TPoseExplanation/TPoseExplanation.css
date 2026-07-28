@@ -1,1 +1,407 @@
-/* 十字架ポーズの解説専用スタイル */
+.tpose-explanation {
+  position: relative;
+  display: grid;
+  gap: 16px;
+}
+
+.tpose-explanation__lead {
+  margin: 0;
+  color: #334155;
+  font-weight: 700;
+}
+
+/* 2カラムレイアウト */
+.tpose-explanation__body {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  align-items: start;
+}
+
+/* 左: ピクトグラムエリア */
+.tpose-explanation__figure-wrap {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-height: 280px;
+  border: 1px solid #cbd5e1;
+  border-radius: 12px;
+  background: #f8fafc;
+  overflow: hidden;
+}
+
+.tpose-explanation__figure-svg {
+  width: 100%;
+  height: auto;
+}
+
+/* 固定ボディ → JSX内のstrokeインラインで指定するため、CSSclassは不要に */
+.tpose-explanation__fig-body {
+  stroke: #334155;
+  stroke-width: 4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.tpose-explanation__fig-head {
+  fill: #334155;
+}
+
+/* 腕（動的）→ JSX内のstrokeインラインで指定 */
+.tpose-explanation__fig-arm {
+  stroke: #64748b;
+  stroke-width: 14;
+  stroke-linecap: round;
+  transition: stroke 200ms ease;
+}
+
+.tpose-explanation__fig-arm.is-ok {
+  stroke: #16a34a;
+}
+
+/* 関節ドット → JSX内のfillインラインで指定 */
+.tpose-explanation__fig-joint {
+  fill: #fff;
+  opacity: 0.7;
+}
+
+/* ゴースト（目標位置: T-Pose 90°/180°） */
+.tpose-explanation__fig-ghost line {
+  stroke: #0284c7;
+  stroke-width: 4;
+  stroke-dasharray: 5 5;
+  stroke-linecap: round;
+  opacity: 0.2;
+}
+
+/* 角度ラベル */
+.tpose-explanation__fig-label {
+  fill: #64748b;
+  font-size: 10px;
+  font-weight: 600;
+  transition: fill 200ms ease;
+}
+
+.tpose-explanation__fig-label.is-ok {
+  fill: #15803d;
+  font-weight: 700;
+}
+
+.tpose-explanation__fig-waiting {
+  fill: #94a3b8;
+  font-weight: 600;
+}
+
+/* 削除: T-POSEカットイン（ポップアップ） */
+
+/* 右: 条件パネル */
+.tpose-explanation__panel {
+  display: grid;
+  gap: 10px;
+  align-content: start;
+}
+
+/* 条件リスト */
+.tpose-explanation__conditions {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tpose-explanation__step {
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  color: #64748b;
+  overflow: hidden;
+  transition: border-color 160ms ease, background 160ms ease;
+}
+
+.tpose-explanation__step.is-passed {
+  border-color: #86efac;
+  background: #f0fdf4;
+  color: #15803d;
+}
+
+.tpose-explanation__step.is-selected {
+  border-color: #0284c7;
+  box-shadow: 0 0 0 2px rgb(14 165 233 / 18%);
+}
+
+.tpose-explanation__step button {
+  display: grid;
+  gap: 5px;
+  width: 100%;
+  padding: 10px;
+  border: 0;
+  color: inherit;
+  background: transparent;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.tpose-explanation__step-header {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.tpose-explanation__step-header>span:first-child {
+  font-size: 1.1rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+.tpose-explanation__step-header strong {
+  color: #334155;
+  font-size: 0.9rem;
+}
+
+.tpose-explanation__step-subtitle {
+  margin: 0;
+  color: #475569;
+  font-size: 0.8rem;
+}
+
+.tpose-explanation__step-content {
+  display: grid;
+  gap: 8px;
+  margin: 4px 0 0 32px;
+}
+
+.tpose-explanation__condition-action {
+  color: #0369a1;
+  font-size: 0.75rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* プログレスバー */
+.tpose-explanation__progress-bar {
+  height: 6px;
+  border-radius: 999px;
+  background: #e2e8f0;
+  overflow: hidden;
+}
+
+.tpose-explanation__progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #0284c7, #16a34a);
+  transition: width 100ms linear;
+}
+
+/* 角度ゲージバー */
+.tpose-explanation__gauges {
+  display: grid;
+  gap: 8px;
+}
+
+.tpose-explanation__gauge-wrap {
+  display: grid;
+  grid-template-columns: 64px 1fr;
+  align-items: center;
+  gap: 8px;
+}
+
+.tpose-explanation__gauge-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #475569;
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.tpose-explanation__gauge {
+  position: relative;
+  height: 14px;
+  display: flex;
+  align-items: center;
+}
+
+.tpose-explanation__gauge-track {
+  position: relative;
+  width: 100%;
+  height: 6px;
+  background: #e2e8f0;
+  border-radius: 999px;
+}
+
+.tpose-explanation__gauge-zone {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  background: rgba(34, 197, 94, 0.3);
+  /* OK zone color */
+  border-radius: 999px;
+}
+
+.tpose-explanation__gauge.is-passed .tpose-explanation__gauge-zone {
+  background: rgba(34, 197, 94, 0.6);
+}
+
+.tpose-explanation__gauge-pointer {
+  position: absolute;
+  top: 50%;
+  width: 10px;
+  height: 10px;
+  background: #334155;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  transition: left 100ms linear, background-color 200ms;
+}
+
+.tpose-explanation__gauge.is-passed .tpose-explanation__gauge-pointer {
+  background: #16a34a;
+  box-shadow: 0 0 0 2px #fff, 0 0 0 4px rgba(22, 163, 74, 0.4);
+}
+
+/* 判定結果ウィンドウ */
+.tpose-explanation__result-window {
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  border-radius: 12px;
+  background: #f1f5f9;
+  border: 2px solid #cbd5e1;
+  color: #475569;
+  text-align: center;
+  transition: all 300ms ease;
+  min-height: 80px;
+}
+
+.tpose-explanation__result-text {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tpose-explanation__result-mark {
+  font-size: 2rem;
+  font-weight: 900;
+  width: 2rem;
+  /* Reserve space for the mark so layout is stable */
+  text-align: center;
+}
+
+.tpose-explanation__result-window.is-triggered {
+  background: #f0fdf4;
+  border-color: #22c55e;
+  box-shadow: 0 4px 20px rgba(34, 197, 94, 0.2);
+  color: #15803d;
+}
+
+/* 詳細オーバーレイ（全体に重なる） */
+.tpose-explanation__detail-overlay {
+  position: absolute;
+  z-index: 20;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgb(248 250 252 / 60%);
+  backdrop-filter: blur(2px);
+  animation: tpose-overlay-in 160ms ease-out;
+}
+
+@keyframes tpose-overlay-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+.tpose-explanation__detail {
+  display: grid;
+  align-content: start;
+  gap: 14px;
+  width: min(100%, 720px);
+  max-height: min(700px, calc(100dvh - 48px));
+  padding: 24px;
+  overflow: auto;
+  border-radius: 16px;
+  color: #1e293b;
+  background: #fff;
+  box-shadow: 0 20px 60px rgb(15 23 42 / 25%);
+}
+
+.tpose-explanation__detail-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: start;
+}
+
+.tpose-explanation__detail-heading h2 {
+  margin: 0;
+  color: #0f172a;
+  font-size: 1.2rem;
+}
+
+.tpose-explanation__detail-heading button {
+  padding: 6px 12px;
+  border: 1px solid #94a3b8;
+  border-radius: 999px;
+  color: #334155;
+  background: #fff;
+  font: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+
+
+.tpose-explanation__code-example {
+  margin: 0;
+  padding: 16px;
+  overflow-x: auto;
+  border-radius: 10px;
+  color: #e2e8f0;
+  background: #0f172a;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: clamp(0.72rem, 1.1vw, 0.88rem);
+  line-height: 1.65;
+  tab-size: 2;
+}
+
+.tpose-explanation__code-line {
+  display: block;
+  min-height: 1.65em;
+}
+
+.tpose-explanation__code-token.is-keyword {
+  color: #f472b6;
+  font-weight: 700;
+}
+
+.tpose-explanation__code-token.is-function {
+  color: #67e8f9;
+}
+
+.tpose-explanation__code-token.is-constant {
+  color: #fbbf24;
+}
+
+.tpose-explanation__code-token.is-number {
+  color: #c4b5fd;
+}
+
+/* レスポンシブ */
+@media (max-width: 720px) {
+  .tpose-explanation__body {
+    grid-template-columns: 1fr;
+  }
+
+  .tpose-explanation__figure-wrap {
+    min-height: 240px;
+  }
+}
