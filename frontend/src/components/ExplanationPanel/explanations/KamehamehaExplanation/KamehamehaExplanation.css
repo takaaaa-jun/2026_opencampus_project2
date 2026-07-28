@@ -1,1 +1,555 @@
-/* かめはめ波の解説専用スタイル */
+.kamehameha-explanation {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.kamehameha-explanation__lead {
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.7;
+  color: #334155;
+}
+
+/* 凡例 */
+
+.kamehameha-explanation__legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 20px;
+  padding: 12px 16px;
+  border: 1px solid #dbe4ee;
+  border-radius: 12px;
+  background: #f8fafc;
+}
+
+.kamehameha-explanation__legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #334155;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.kamehameha-explanation__legend i {
+  display: inline-block;
+  width: 30px;
+  height: 5px;
+  border-radius: 999px;
+}
+
+.kamehameha-explanation__legend i.wrist {
+  background: #2563eb;
+}
+
+.kamehameha-explanation__legend i.finger {
+  background: #f97316;
+}
+
+.kamehameha-explanation__legend i.passed {
+  background: #16a34a;
+}
+
+/* 骨格表示領域 */
+
+.kamehameha-explanation__visualization {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 100%;
+  height: 540px;
+  min-height: 540px;
+
+  overflow: hidden;
+  box-sizing: border-box;
+
+  border: 2px solid #dbe4ee;
+  border-radius: 18px;
+
+  background:
+    linear-gradient(
+      rgba(148, 163, 184, 0.12) 1px,
+      transparent 1px
+    ),
+    linear-gradient(
+      90deg,
+      rgba(148, 163, 184, 0.12) 1px,
+      transparent 1px
+    ),
+    #f8fafc;
+
+  background-size: 40px 40px;
+}
+
+.kamehameha-explanation__visualization.is-passed {
+  border-color: #16a34a;
+  background-color: #f0fdf4;
+}
+
+.kamehameha-explanation__visualization svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* 通常の骨格 */
+
+.kamehameha-explanation__hand-line {
+  stroke: #64748b;
+  stroke-width: 0.006;
+  stroke-linecap: round;
+  opacity: 0.32;
+}
+
+.kamehameha-explanation__hand-point {
+  fill: #64748b;
+  opacity: 0.28;
+}
+
+/* 判定に使用する点 */
+
+.kamehameha-explanation__hand-point.is-target {
+  fill: #dc2626;
+  stroke: #ffffff;
+  stroke-width: 0.008;
+  opacity: 1;
+}
+
+.kamehameha-explanation__hand-point.is-target.is-passed {
+  fill: #16a34a;
+}
+
+.kamehameha-explanation__point-label {
+  fill: #b91c1c;
+  font-size: 0.033px;
+  font-weight: 900;
+
+  paint-order: stroke;
+  stroke: #ffffff;
+  stroke-width: 0.008;
+  stroke-linejoin: round;
+}
+
+.kamehameha-explanation__point-label.is-passed {
+  fill: #15803d;
+}
+
+/* 判定に使用する距離線 */
+
+.kamehameha-explanation__distance-line {
+  fill: none;
+  stroke-linecap: round;
+  opacity: 1;
+}
+
+.kamehameha-explanation__distance-line.wrist {
+  stroke: #2563eb;
+  stroke-width: 0.014;
+  stroke-dasharray: 0.035 0.018;
+}
+
+.kamehameha-explanation__distance-line.finger {
+  stroke: #f97316;
+  stroke-width: 0.014;
+  stroke-dasharray: 0.014 0.014;
+}
+
+.kamehameha-explanation__distance-line.is-passed {
+  stroke: #16a34a;
+  stroke-width: 0.018;
+}
+
+/* 距離の名前と現在値 */
+
+.kamehameha-explanation__distance-label rect {
+  fill: rgba(255, 255, 255, 0.94);
+  stroke-width: 0.005;
+}
+
+.kamehameha-explanation__distance-label text {
+  font-size: 0.027px;
+  font-weight: 900;
+
+  paint-order: stroke;
+  stroke: #ffffff;
+  stroke-width: 0.006;
+  stroke-linejoin: round;
+}
+
+.kamehameha-explanation__distance-label.wrist rect {
+  stroke: #2563eb;
+}
+
+.kamehameha-explanation__distance-label.wrist text {
+  fill: #1d4ed8;
+}
+
+.kamehameha-explanation__distance-label.finger rect {
+  stroke: #f97316;
+}
+
+.kamehameha-explanation__distance-label.finger text {
+  fill: #c2410c;
+}
+
+.kamehameha-explanation__distance-label.is-passed rect {
+  fill: #dcfce7;
+  stroke: #16a34a;
+}
+
+.kamehameha-explanation__distance-label.is-passed text {
+  fill: #15803d;
+}
+
+/* 手が検出されていない場合 */
+
+.kamehameha-explanation__waiting {
+  margin: 0;
+  padding: 24px;
+  color: #64748b;
+  font-size: 1.05rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+/* 3条件成功表示 */
+
+.kamehameha-explanation__pose-success {
+  position: absolute;
+  right: 18px;
+  bottom: 18px;
+
+  margin: 0;
+  padding: 10px 16px;
+
+  border-radius: 999px;
+
+  color: #ffffff;
+  background: #16a34a;
+
+  font-size: 0.95rem;
+  font-weight: 900;
+}
+
+/* 条件一覧 */
+
+.kamehameha-explanation__conditions {
+  display: grid;
+  grid-template-columns:
+    repeat(2, minmax(0, 1fr));
+
+  gap: 12px;
+
+  margin: 0;
+  padding: 0;
+
+  list-style: none;
+}
+
+.kamehameha-explanation__conditions li {
+  overflow: hidden;
+
+  border: 2px solid #dbe4ee;
+  border-radius: 14px;
+
+  background: #ffffff;
+
+  transition:
+    border-color 0.2s ease,
+    background-color 0.2s ease,
+    transform 0.2s ease;
+}
+
+.kamehameha-explanation__conditions li:hover {
+  transform: translateY(-1px);
+  border-color: #94a3b8;
+}
+
+.kamehameha-explanation__conditions li.is-selected {
+  border-color: #2563eb;
+}
+
+.kamehameha-explanation__conditions li.is-passed {
+  border-color: #16a34a;
+  background: #dcfce7;
+}
+
+.kamehameha-explanation__conditions button {
+  display: grid;
+  grid-template-columns:
+    auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+
+  width: 100%;
+  min-height: 105px;
+
+  padding: 16px;
+
+  border: 0;
+  background: transparent;
+
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.kamehameha-explanation__condition-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 38px;
+  height: 38px;
+
+  border: 2px solid #94a3b8;
+  border-radius: 50%;
+
+  color: #64748b;
+  background: #ffffff;
+
+  font-size: 1.25rem;
+  font-weight: 900;
+}
+
+.is-passed
+  .kamehameha-explanation__condition-icon {
+  border-color: #16a34a;
+  color: #ffffff;
+  background: #16a34a;
+}
+
+.kamehameha-explanation__condition-content {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  min-width: 0;
+}
+
+.kamehameha-explanation__condition-content strong {
+  color: #1e293b;
+  font-size: 0.98rem;
+  line-height: 1.5;
+}
+
+.kamehameha-explanation__condition-content small {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+
+  color: #64748b;
+  font-size: 0.83rem;
+  line-height: 1.6;
+}
+
+.kamehameha-explanation__condition-status {
+  display: inline-flex;
+  align-items: center;
+
+  padding: 3px 9px;
+  border-radius: 999px;
+
+  color: #475569;
+  background: #e2e8f0;
+
+  font-weight: 800;
+}
+
+.kamehameha-explanation__condition-status.is-passed {
+  color: #ffffff;
+  background: #16a34a;
+}
+
+.kamehameha-explanation__condition-action {
+  color: #2563eb;
+  font-size: 0.8rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+/* 維持時間 */
+
+.kamehameha-explanation__hold {
+  padding: 16px;
+
+  border: 1px solid #dbe4ee;
+  border-radius: 14px;
+
+  background: #f8fafc;
+}
+
+.kamehameha-explanation__hold.is-continuing {
+  border-color: #2563eb;
+  background: #eff6ff;
+}
+
+.kamehameha-explanation__hold p {
+  margin: 0 0 10px;
+
+  color: #334155;
+  font-weight: 800;
+}
+
+.kamehameha-explanation__progress {
+  width: 100%;
+  height: 14px;
+
+  overflow: hidden;
+
+  border-radius: 999px;
+  background: #e2e8f0;
+}
+
+.kamehameha-explanation__progress-value {
+  height: 100%;
+
+  border-radius: inherit;
+  background: #2563eb;
+
+  transition: width 0.1s linear;
+}
+
+/* 最終結果 */
+
+.kamehameha-explanation__result {
+  margin: 0;
+  padding: 15px 18px;
+
+  border: 2px solid #cbd5e1;
+  border-radius: 14px;
+
+  color: #334155;
+  background: #f8fafc;
+
+  font-size: 1.05rem;
+  font-weight: 900;
+  text-align: center;
+}
+
+.kamehameha-explanation__result.is-triggered {
+  border-color: #16a34a;
+  color: #166534;
+  background: #dcfce7;
+}
+
+/* 詳細モーダル */
+
+.kamehameha-explanation__detail-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 24px;
+
+  background: rgba(15, 23, 42, 0.55);
+}
+
+.kamehameha-explanation__detail {
+  width: min(680px, 100%);
+  max-height: 85vh;
+  overflow: auto;
+
+  padding: 24px;
+
+  border-radius: 18px;
+  background: #ffffff;
+}
+
+.kamehameha-explanation__detail-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.kamehameha-explanation__detail-heading h2 {
+  margin: 0;
+
+  color: #1e293b;
+  font-size: 1.25rem;
+}
+
+.kamehameha-explanation__detail-heading button {
+  padding: 8px 14px;
+
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+
+  color: #334155;
+  background: #ffffff;
+
+  cursor: pointer;
+}
+
+.kamehameha-explanation__detail-summary {
+  margin: 18px 0;
+
+  color: #475569;
+  line-height: 1.8;
+}
+
+.kamehameha-explanation__code-example {
+  overflow-x: auto;
+
+  margin: 0;
+  padding: 18px;
+
+  border-radius: 12px;
+
+  color: #e2e8f0;
+  background: #0f172a;
+
+  font-size: 0.9rem;
+  line-height: 1.7;
+}
+
+/* 画面幅が小さい場合 */
+
+@media (max-width: 800px) {
+  .kamehameha-explanation__visualization {
+    height: 440px;
+    min-height: 440px;
+  }
+
+  .kamehameha-explanation__conditions {
+    grid-template-columns: 1fr;
+  }
+
+  .kamehameha-explanation__conditions button {
+    grid-template-columns:
+      auto minmax(0, 1fr);
+  }
+
+  .kamehameha-explanation__condition-action {
+    display: none;
+  }
+}
+
+@media (max-width: 500px) {
+  .kamehameha-explanation__visualization {
+    height: 360px;
+    min-height: 360px;
+  }
+
+  .kamehameha-explanation__legend {
+    flex-direction: column;
+  }
+
+  .kamehameha-explanation__detail-overlay {
+    padding: 12px;
+  }
+
+  .kamehameha-explanation__detail {
+    padding: 18px;
+  }
+}
