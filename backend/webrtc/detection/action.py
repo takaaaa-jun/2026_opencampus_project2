@@ -41,8 +41,21 @@ class action:
         return self._tpose.start_time
 
     @property
+    def tpose_elapsed_time(self):
+        if self._tpose.start_time is None:
+            return 0.0
+        return min(self._tpose.clock() - self._tpose.start_time, self._tpose.duration)
+
+    @property
     def tpose_detected(self):
         return self._tpose.detected
+
+    def get_tpose_details(self, landmarks):
+        details = pose.get_tpose_details(landmarks)
+        details["elapsed_time"] = round(self.tpose_elapsed_time, 2)
+        details["triggered"] = self._tpose.detected
+        return details
+
 
     @property
     def surprise_start_time(self):
