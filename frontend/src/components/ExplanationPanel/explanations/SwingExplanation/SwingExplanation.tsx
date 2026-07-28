@@ -1,472 +1,332 @@
 import { useEffect, useRef, useState } from 'react'
 import type { ExplanationProps } from '../../types'
+
 import './SwingExplanation.css'
 
-type Point = {
+type Landmark = {
+  x: number
+  y: number
+  z?: number
+  visibility?: number
+}
+
+type PoseData = {
+  landmarks?: Landmark[]
+} | null | undefined
+
+type DetectionDataLike = NonNullable<ExplanationProps['detectionData']> & {
+  pose?: PoseData
+  actions?: {
+    swing?: boolean
+  }
+}
+
+type Phase = {
+  id: 'top' | 'middle' | 'bottom'
+  label: string
+  frameLabel: string
+  startIndex: number
+  endIndex: number
+}
+
+type ChartPoint = {
   x: number
   y: number
 }
 
-type SwingDetails = {
-  isPoseAvailable: boolean
-  handsHeight: number | null
-  top: number | null
-  middle: number | null
-  foot: number | null
-  'foot-top': number | null
-  isHistoryFull: boolean
-  isDirectionPassed: boolean
-  isDistancePassed: boolean
-  triggered: boolean
+const FRAME_COUNT = 15
+const MOVEMENT_THRESHOLD = 0.1
+const CHART_WIDTH = 620
+const CHART_HEIGHT = 240
+const CHART_LEFT = 48
+const CHART_RIGHT = 18
+const CHART_TOP = 18
+const CHART_BOTTOM = 38
+
+const PHASES: Phase[] = [
+  { id: 'top', label: '序盤（上）', frameLabel: '1〜3', startIndex: 0, endIndex: 2 },
+  { id: 'middle', label: '中盤', frameLabel: '7〜9', startIndex: 6, endIndex: 8 },
+  { id: 'bottom', label: '終盤（下）', frameLabel: '13〜15', startIndex: 12, endIndex: 14 },
+]
+
+function safeLandmark(landmarks: Landmark[] | undefined, index: number): Landmark | undefined {
+  return landmarks?.[index]
 }
 
-type ConditionId = 'history' | 'direction' | 'distance'
-
-type ConditionDetail = {
-  title: string
-  summary: string
-  code: string
+function average(values: number[]): number {
+  return values.reduce((sum, value) => sum + value, 0) / values.length
 }
 
-const SWING_DISPLAY_DURATION_MS = 1500
-
-const CONDITION_DETAILS: Record<ConditionId, ConditionDetail> = {
-  history: {
-    title: '直近15フレームの履歴蓄積',
-    summary: '両手首（左15番、右16番）のY座標の平均値を計算し、直近15フレーム分キューに保存します。履歴が15フレーム溜まるまでは判定を行いません。',
-    code: `# 左右の手首のY座標の平均をとる
-hands_height = (landmarks[15].y + landmarks[16].y) / 2
-
-# キューに保存（最大15フレーム）
-frames.append(hands_height)
-
-# 履歴が15フレーム溜まったか
-is_history_full = len(frames) >= 15`,
-  },
-  direction: {
-    title: '上から下へ動いている (top < middle < foot)',
-    summary: '15フレームの履歴を最初 (0〜2フレームの平均 top)、中間 (6〜8フレームの平均 middle)、最後 (12〜14フレームの平均 foot) に分け、手全体が上から下へ動いている（Y座標が増加している）か判定します。',
-    code: `# 各区間の平均高さを計算
-top = sum(frames[0:3]) / 3
-middle = sum(frames[6:9]) / 3
-foot = sum(frames[12:15]) / 3
-
-# 上から下へ動いているか (Y座標が増加しているか)
-is_direction_passed = top < middle < foot`,
-  },
-  distance: {
-    title: '十分な移動量 (foot - top >= 0.1)',
-    summary: '最後の位置 (foot) と最初の位置 (top) の差が、画面の高さに対して0.1以上（約10%以上）大きく動いたかを判定します。',
-    code: `# 移動量を計算
-foot_minus_top = foot - top
-
-# 0.1（画面高さの10%）以上移動したか
-is_distance_passed = foot_minus_top >= 0.1`,
-  },
-}
-
-function isPoint(value: unknown): value is Point {
-  if (typeof value !== 'object' || value === null) {
-    return false
-  }
-
-  const point = value as Record<string, unknown>
-  return typeof point.x === 'number' && typeof point.y === 'number'
-}
-
-function getPoseLandmarks(detectionData: ExplanationProps['detectionData']): Array<Point | null> {
-  if (detectionData === null || typeof detectionData.pose !== 'object' || detectionData.pose === null) {
-    return []
-  }
-
-  const landmarks = (detectionData.pose as Record<string, unknown>).landmarks
-  if (!Array.isArray(landmarks)) {
-    return []
-  }
-
-  return landmarks.map((landmark) => (isPoint(landmark) ? landmark : null))
-}
-
-function getSwingDetails(detectionData: ExplanationProps['detectionData']): SwingDetails | null {
-  if (detectionData === null || typeof detectionData.actionDetails !== 'object' || detectionData.actionDetails === null) {
+function averageRange(samples: number[], startIndex: number, endIndex: number): number | null {
+  if (samples.length <= endIndex) {
     return null
   }
 
-  const swing = (detectionData.actionDetails as Record<string, unknown>).swing
-  if (typeof swing !== 'object' || swing === null) {
-    return null
-  }
-
-  const details = swing as Record<string, unknown>
-  const footTopVal = details['foot-top'] !== undefined ? details['foot-top'] : details['foot_minus_top']
-  
-  if (
-    typeof details.isPoseAvailable !== 'boolean' ||
-    typeof details.isHistoryFull !== 'boolean' ||
-    typeof details.isDirectionPassed !== 'boolean' ||
-    typeof details.isDistancePassed !== 'boolean' ||
-    typeof details.triggered !== 'boolean'
-  ) {
-    return null
-  }
-
-  return {
-    isPoseAvailable: details.isPoseAvailable,
-    handsHeight: typeof details.handsHeight === 'number' ? details.handsHeight : null,
-    top: typeof details.top === 'number' ? details.top : null,
-    middle: typeof details.middle === 'number' ? details.middle : null,
-    foot: typeof details.foot === 'number' ? details.foot : null,
-    'foot-top': typeof footTopVal === 'number' ? footTopVal : null,
-    isHistoryFull: details.isHistoryFull,
-    isDirectionPassed: details.isDirectionPassed,
-    isDistancePassed: details.isDistancePassed,
-    triggered: details.triggered,
-  }
+  return average(samples.slice(startIndex, endIndex + 1))
 }
 
-function ConditionStep({
-  condition,
-  passed,
-  title,
-  selected,
-  onSelect,
-}: {
-  condition: ConditionId
-  passed: boolean
-  title: string
-  selected: boolean
-  onSelect: (condition: ConditionId) => void
-}) {
-  return (
-    <li className={`${passed ? 'is-passed' : ''}${selected ? ' is-selected' : ''}`}>
-      <button type="button" onClick={() => onSelect(condition)} aria-pressed={selected}>
-        <span aria-hidden="true">{passed ? '✓' : '○'}</span>
-        <strong>{title}</strong>
-        <span className="swing-explanation__condition-action" aria-hidden="true">詳しく見る</span>
-      </button>
-    </li>
-  )
+function formatHeight(value: number | null): string {
+  return value === null ? '—' : value.toFixed(3)
 }
 
-function highlightCode(code: string) {
-  const tokenPattern = /(\b(?:if|and|or|is|not|None|True|False)\b|\b(?:average|distance_between|abs|sum|len|append)\b|\b[A-Z][A-Z_]+\b|\b\d+(?:\.\d+)?\b)/g
-
-  return code.split('\n').map((line, lineIndex) => (
-    <span className="swing-explanation__code-line" key={`${line}-${lineIndex}`}>
-      {line.split(tokenPattern).map((part, partIndex) => {
-        if (/^(if|and|or|is|not|None|True|False)$/.test(part)) {
-          return <span className="swing-explanation__code-token is-keyword" key={partIndex}>{part}</span>
-        }
-
-        if (/^(average|distance_between|abs|sum|len|append)$/.test(part)) {
-          return <span className="swing-explanation__code-token is-function" key={partIndex}>{part}</span>
-        }
-
-        if (/^[A-Z][A-Z_]+$/.test(part)) {
-          return <span className="swing-explanation__code-token is-constant" key={partIndex}>{part}</span>
-        }
-
-        if (/^\d+(?:\.\d+)?$/.test(part)) {
-          return <span className="swing-explanation__code-token is-number" key={partIndex}>{part}</span>
-        }
-
-        return part
-      })}
-      {lineIndex < code.split('\n').length - 1 ? '\n' : null}
-    </span>
-  ))
+function chartX(index: number): number {
+  const plotWidth = CHART_WIDTH - CHART_LEFT - CHART_RIGHT
+  return CHART_LEFT + (index / (FRAME_COUNT - 1)) * plotWidth
 }
 
-function ConditionDetailPanel({ condition, onClose }: { condition: ConditionId; onClose: () => void }) {
-  const detail = CONDITION_DETAILS[condition]
+function chartY(value: number): number {
+  const plotHeight = CHART_HEIGHT - CHART_TOP - CHART_BOTTOM
+  const clamped = Math.max(0, Math.min(1, value))
+  return CHART_TOP + clamped * plotHeight
+}
+
+function phaseBackgroundPosition(phase: Phase): { x: number; width: number } {
+  const halfStep = (chartX(1) - chartX(0)) / 2
+  const left = Math.max(CHART_LEFT, chartX(phase.startIndex) - halfStep)
+  const right = Math.min(CHART_WIDTH - CHART_RIGHT, chartX(phase.endIndex) + halfStep)
+
+  return { x: left, width: right - left }
+}
+
+function WristHeightChart({ samples }: { samples: number[] }) {
+  const points: ChartPoint[] = samples.map((value, index) => ({
+    x: chartX(index),
+    y: chartY(value),
+  }))
+  const polylinePoints = points.map((point) => `${point.x},${point.y}`).join(' ')
+  const gridValues = [0, 0.25, 0.5, 0.75, 1]
 
   return (
-    <section className="swing-explanation__detail" aria-label={`${detail.title}の詳細`} onClick={(event) => event.stopPropagation()}>
-      <div className="swing-explanation__detail-heading">
+    <div className="swing-chartCard">
+      <div className="swing-chartCard__header">
         <div>
-          <h2>{detail.title}</h2>
+          <h4>左右の手首の平均Y座標</h4>
+          <p>Y座標は，小さいほど画面の上，大きいほど画面の下です。</p>
         </div>
-        <button type="button" onClick={onClose}>閉じる</button>
+        <span className="swing-samplePill">
+          {samples.length} / {FRAME_COUNT} フレーム
+        </span>
       </div>
-      <p className="swing-explanation__detail-summary">{detail.summary}</p>
-      <pre className="swing-explanation__code-example"><code>{highlightCode(detail.code)}</code></pre>
-    </section>
+
+      <svg
+        className="swing-chart"
+        viewBox={`0 0 ${CHART_WIDTH} ${CHART_HEIGHT}`}
+        role="img"
+        aria-label="直近15フレームの手首の平均Y座標"
+      >
+        {PHASES.map((phase) => {
+          const position = phaseBackgroundPosition(phase)
+          return (
+            <rect
+              key={phase.id}
+              x={position.x}
+              y={CHART_TOP}
+              width={position.width}
+              height={CHART_HEIGHT - CHART_TOP - CHART_BOTTOM}
+              className={`swing-phaseArea swing-phaseArea--${phase.id}`}
+            />
+          )
+        })}
+
+        {gridValues.map((value) => {
+          const y = chartY(value)
+          return (
+            <g key={value}>
+              <line
+                x1={CHART_LEFT}
+                y1={y}
+                x2={CHART_WIDTH - CHART_RIGHT}
+                y2={y}
+                className="swing-chart__gridLine"
+              />
+              <text x={CHART_LEFT - 9} y={y + 4} className="swing-chart__axisLabel">
+                {value.toFixed(2)}
+              </text>
+            </g>
+          )
+        })}
+
+        <line
+          x1={CHART_LEFT}
+          y1={CHART_TOP}
+          x2={CHART_LEFT}
+          y2={CHART_HEIGHT - CHART_BOTTOM}
+          className="swing-chart__axis"
+        />
+        <line
+          x1={CHART_LEFT}
+          y1={CHART_HEIGHT - CHART_BOTTOM}
+          x2={CHART_WIDTH - CHART_RIGHT}
+          y2={CHART_HEIGHT - CHART_BOTTOM}
+          className="swing-chart__axis"
+        />
+
+        {polylinePoints && <polyline points={polylinePoints} className="swing-chart__line" />}
+
+        {points.map((point, index) => (
+          <circle key={`${index}-${samples[index]}`} cx={point.x} cy={point.y} r="4.5" className="swing-chart__point" />
+        ))}
+
+        {[0, 6, 12, 14].map((index) => (
+          <text key={index} x={chartX(index)} y={CHART_HEIGHT - 14} className="swing-chart__frameLabel">
+            {index + 1}
+          </text>
+        ))}
+
+        <text x={CHART_WIDTH / 2} y={CHART_HEIGHT - 2} className="swing-chart__titleLabel">
+          フレーム
+        </text>
+      </svg>
+
+      <div className="swing-chartLegend" aria-label="判定に使用するフレーム範囲">
+        {PHASES.map((phase) => (
+          <span key={phase.id} className={`swing-chartLegend__item swing-chartLegend__item--${phase.id}`}>
+            {phase.label}：{phase.frameLabel}フレーム
+          </span>
+        ))}
+      </div>
+    </div>
   )
-}
-
-function isSwingDetected(detectionData: ExplanationProps['detectionData']) {
-  if (detectionData === null || typeof detectionData.actions !== 'object' || detectionData.actions === null) {
-    return false
-  }
-
-  return (detectionData.actions as Record<string, unknown>).swing === true
 }
 
 export function SwingExplanation({ detectionData }: ExplanationProps) {
-  const [isSwingVisible, setIsSwingVisible] = useState(false)
-  const [selectedCondition, setSelectedCondition] = useState<ConditionId | null>(null)
-  const [localHistory, setLocalHistory] = useState<Point[]>([])
-  
-  const canShowNextSwingRef = useRef(true)
-  const swingTimerRef = useRef<number | null>(null)
-  
-  const landmarks = getPoseLandmarks(detectionData)
-  const details = getSwingDetails(detectionData)
-  
-  const leftShoulder = landmarks[11]
-  const rightShoulder = landmarks[12]
-  const leftElbow = landmarks[13]
-  const rightElbow = landmarks[14]
-  const leftWrist = landmarks[15]
-  const rightWrist = landmarks[16]
+  const [samples, setSamples] = useState<number[]>([])
+  const lastDetectionDataRef = useRef<ExplanationProps['detectionData']>(null)
+  const data = detectionData as DetectionDataLike | null
+  const landmarks = data?.pose?.landmarks
+  const leftWrist = safeLandmark(landmarks, 15)
+  const rightWrist = safeLandmark(landmarks, 16)
+  const hasPose = Boolean(leftWrist && rightWrist)
+  const backendDetected = Boolean(data?.actions?.swing)
 
   useEffect(() => {
-    if (leftWrist && rightWrist) {
-      const currentPt = {
-        x: (leftWrist.x + rightWrist.x) / 2,
-        y: (leftWrist.y + rightWrist.y) / 2
-      }
-      setLocalHistory((prev) => {
-        const next = [...prev, currentPt]
-        if (next.length > 15) {
-          next.shift()
-        }
-        return next
-      })
-    } else {
-      setLocalHistory([])
-    }
-  }, [detectionData])
-
-  const swingDetected = isSwingDetected(detectionData)
-  const resultText = details?.triggered
-    ? '振り下ろし！'
-    : details?.isPoseAvailable
-      ? details.isHistoryFull
-        ? '動きを検出中'
-        : `履歴蓄積中 (${localHistory.length}/15)`
-      : 'ポーズを検出中'
-
-  useEffect(() => {
-    if (!swingDetected && !isSwingVisible) {
-      canShowNextSwingRef.current = true
-    }
-
-    if (!swingDetected || isSwingVisible || !canShowNextSwingRef.current) {
+    if (!detectionData || detectionData === lastDetectionDataRef.current) {
       return
     }
 
-    canShowNextSwingRef.current = false
-    setIsSwingVisible(true)
-    swingTimerRef.current = window.setTimeout(() => {
-      swingTimerRef.current = null
-      setIsSwingVisible(false)
-    }, SWING_DISPLAY_DURATION_MS)
-  }, [swingDetected, isSwingVisible])
+    lastDetectionDataRef.current = detectionData
+    const currentData = detectionData as DetectionDataLike
+    const currentLandmarks = currentData.pose?.landmarks
+    const currentLeftWrist = safeLandmark(currentLandmarks, 15)
+    const currentRightWrist = safeLandmark(currentLandmarks, 16)
 
-  useEffect(() => () => {
-    if (swingTimerRef.current !== null) {
-      window.clearTimeout(swingTimerRef.current)
+    if (!currentLeftWrist || !currentRightWrist) {
+      return
     }
-  }, [])
 
-  const visualization = details !== null &&
-    details.isPoseAvailable &&
-    leftShoulder !== undefined && leftShoulder !== null &&
-    rightShoulder !== undefined && rightShoulder !== null
-    ? {
-        details,
-        leftShoulder,
-        rightShoulder,
-        leftElbow,
-        rightElbow,
-        leftWrist,
-        rightWrist,
-      }
-    : null
+    const handsHeight = (currentLeftWrist.y + currentRightWrist.y) / 2
+    setSamples((previous) => [...previous.slice(-(FRAME_COUNT - 1)), handsHeight])
+  }, [detectionData])
 
-  const topVal = details?.top !== null && details?.top !== undefined ? details.top.toFixed(3) : '-'
-  const middleVal = details?.middle !== null && details?.middle !== undefined ? details.middle.toFixed(3) : '-'
-  const footVal = details?.foot !== null && details?.foot !== undefined ? details.foot.toFixed(3) : '-'
-  const diffVal = details?.['foot-top'] !== null && details?.['foot-top'] !== undefined ? details['foot-top'].toFixed(3) : '-'
-  const currentHeightVal = details?.handsHeight !== null && details?.handsHeight !== undefined ? details.handsHeight.toFixed(3) : '-'
+  if (!hasPose) {
+    return (
+      <section className="swing">
+        <div className="swing-emptyState">
+          <h3>振り下ろしの説明</h3>
+          <p>骨格を検出中です。左手首 15・右手首 16 が見えると，15フレーム分の動きを記録します。</p>
+        </div>
+      </section>
+    )
+  }
+
+  const topAverage = averageRange(samples, 0, 2)
+  const middleAverage = averageRange(samples, 6, 8)
+  const bottomAverage = averageRange(samples, 12, 14)
+  const historyReady = samples.length === FRAME_COUNT
+  const orderOk =
+    historyReady &&
+    topAverage !== null &&
+    middleAverage !== null &&
+    bottomAverage !== null &&
+    topAverage < middleAverage &&
+    middleAverage < bottomAverage
+  const movement = topAverage !== null && bottomAverage !== null ? bottomAverage - topAverage : null
+  const movementOk = movement !== null && movement >= MOVEMENT_THRESHOLD
+  const localDetected = Boolean(orderOk && movementOk)
+  const currentHeight = (leftWrist!.y + rightWrist!.y) / 2
+  const progress = (samples.length / FRAME_COUNT) * 100
+  const movementProgress = movement === null ? 0 : Math.min(Math.max((movement / MOVEMENT_THRESHOLD) * 100, 0), 100)
 
   return (
-    <section className="swing-explanation" aria-label="振り下ろし動作の判定過程">
-      <p className="swing-explanation__lead">
-        両手首の平均高さが、15フレームの間に上から下へ大きく移動したかを判定します。
-      </p>
-
-      <div className="swing-explanation__visualization">
-        {visualization !== null ? (
-          <svg viewBox="0 0 1 1" role="img" aria-label="肩と腕の骨格、手首の軌跡">
-            <line
-              x1={visualization.leftShoulder.x}
-              y1={visualization.leftShoulder.y}
-              x2={visualization.rightShoulder.x}
-              y2={visualization.rightShoulder.y}
-              className="swing-explanation__shoulder-line"
-            />
-            <circle cx={visualization.leftShoulder.x} cy={visualization.leftShoulder.y} r={0.014} className="swing-explanation__shoulder-point" />
-            <circle cx={visualization.rightShoulder.x} cy={visualization.rightShoulder.y} r={0.014} className="swing-explanation__shoulder-point" />
-
-            {visualization.leftElbow && (
-              <line
-                x1={visualization.leftShoulder.x}
-                y1={visualization.leftShoulder.y}
-                x2={visualization.leftElbow.x}
-                y2={visualization.leftElbow.y}
-                className="swing-explanation__limb-line"
-              />
-            )}
-            {visualization.leftWrist && visualization.leftElbow && (
-              <line
-                x1={visualization.leftElbow.x}
-                y1={visualization.leftElbow.y}
-                x2={visualization.leftWrist.x}
-                y2={visualization.leftWrist.y}
-                className="swing-explanation__limb-line"
-              />
-            )}
-
-            {visualization.rightElbow && (
-              <line
-                x1={visualization.rightShoulder.x}
-                y1={visualization.rightShoulder.y}
-                x2={visualization.rightElbow.x}
-                y2={visualization.rightElbow.y}
-                className="swing-explanation__limb-line"
-              />
-            )}
-            {visualization.rightWrist && visualization.rightElbow && (
-              <line
-                x1={visualization.rightElbow.x}
-                y1={visualization.rightElbow.y}
-                x2={visualization.rightWrist.x}
-                y2={visualization.rightWrist.y}
-                className="swing-explanation__limb-line"
-              />
-            )}
-
-            {visualization.leftElbow && <circle cx={visualization.leftElbow.x} cy={visualization.leftElbow.y} r={0.012} fill="#64748b" />}
-            {visualization.rightElbow && <circle cx={visualization.rightElbow.x} cy={visualization.rightElbow.y} r={0.012} fill="#64748b" />}
-            {visualization.leftWrist && <circle cx={visualization.leftWrist.x} cy={visualization.leftWrist.y} r={0.012} fill="#0ea5e9" />}
-            {visualization.rightWrist && <circle cx={visualization.rightWrist.x} cy={visualization.rightWrist.y} r={0.012} fill="#a855f7" />}
-
-            {localHistory.map((pt, idx) => {
-              const opacity = (idx + 1) / localHistory.length
-              const radius = 0.008 + 0.008 * opacity
-              return (
-                <circle
-                  key={idx}
-                  cx={pt.x}
-                  cy={pt.y}
-                  r={radius}
-                  fill="#10b981"
-                  opacity={opacity * 0.7}
-                  className="swing-explanation__trail-point"
-                />
-              )
-            })}
-            
-            {localHistory.length > 1 && (
-              <path
-                d={`M ${localHistory.map(pt => `${pt.x} ${pt.y}`).join(' L ')}`}
-                fill="none"
-                stroke="#10b981"
-                strokeWidth={0.006}
-                opacity={0.5}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            )}
-            
-            {localHistory.length > 0 && (
-              <g>
-                <circle
-                  cx={localHistory[localHistory.length - 1].x}
-                  cy={localHistory[localHistory.length - 1].y}
-                  r={0.02}
-                  className="swing-explanation__current-center"
-                />
-                <text
-                  x={localHistory[localHistory.length - 1].x}
-                  y={localHistory[localHistory.length - 1].y - 0.03}
-                  fontSize={0.03}
-                  className="swing-explanation__center-label"
-                >
-                  手の平均
-                </text>
-              </g>
-            )}
-          </svg>
-        ) : (
-          <p className="swing-explanation__waiting">両手首と肩が映るように、少し離れて立ってね</p>
-        )}
-        {isSwingVisible ? <p className="swing-explanation__detected" role="status">SWING</p> : null}
-      </div>
-
-      {selectedCondition !== null ? (
-        <div className="swing-explanation__detail-overlay" role="dialog" aria-label="振り下ろしの判定方法の詳細" onClick={() => setSelectedCondition(null)}>
-          <ConditionDetailPanel condition={selectedCondition} onClose={() => setSelectedCondition(null)} />
-        </div>
-      ) : null}
-
-      <div className="swing-explanation__stats-panel">
-        <h3>現在のデータ (両手首の平均高さ)</h3>
-        <div className="swing-explanation__stats-grid">
-          <div className="swing-explanation__stat-item">
-            <span className="label">現在の高さ (handsHeight)</span>
-            <span className="value">{currentHeightVal}</span>
-          </div>
-          <div className="swing-explanation__stat-item">
-            <span className="label">過去の平均 (top)</span>
-            <span className="value">{topVal}</span>
-          </div>
-          <div className="swing-explanation__stat-item">
-            <span className="label">中間の平均 (middle)</span>
-            <span className="value">{middleVal}</span>
-          </div>
-          <div className="swing-explanation__stat-item">
-            <span className="label">現在の平均 (foot)</span>
-            <span className="value">{footVal}</span>
-          </div>
-          <div className="swing-explanation__stat-item highlight">
-            <span className="label">移動量 (foot - top)</span>
-            <span className="value">{diffVal}</span>
-          </div>
+    <section className="swing swing--compact">
+      <div className={`swing-hero ${backendDetected ? 'swing-hero--ok' : 'swing-hero--ng'}`}>
+        <div className="swing-hero__icon">{backendDetected ? '✓' : '!'}</div>
+        <div className="swing-hero__content">
+          <h3>判定：{backendDetected ? 'OK' : 'NG'}</h3>
+          <p>バックエンドから届いた振り下ろし判定を表示しています。</p>
         </div>
       </div>
 
-      <ol className="swing-explanation__conditions">
-        <ConditionStep
-          condition="history"
-          passed={details?.isHistoryFull === true}
-          title={`15フレームの履歴蓄積 (${localHistory.length}/15)`}
-          selected={selectedCondition === 'history'}
-          onSelect={(condition) => setSelectedCondition((current) => current === condition ? null : condition)}
-        />
-        <ConditionStep
-          condition="direction"
-          passed={details?.isDirectionPassed === true}
-          title={`上から下への移動 (${topVal} < ${middleVal} < ${footVal})`}
-          selected={selectedCondition === 'direction'}
-          onSelect={(condition) => setSelectedCondition((current) => current === condition ? null : condition)}
-        />
-        <ConditionStep
-          condition="distance"
-          passed={details?.isDistancePassed === true}
-          title={`十分な移動量 (${diffVal} >= 0.1)`}
-          selected={selectedCondition === 'distance'}
-          onSelect={(condition) => setSelectedCondition((current) => current === condition ? null : condition)}
-        />
-      </ol>
+      <WristHeightChart samples={samples} />
 
-      {!details?.isHistoryFull && details?.isPoseAvailable && (
-        <p className="swing-explanation__warning-text">※履歴が15フレーム未満のため判定を行えません。</p>
-      )}
+      <div className="swing-phaseGrid">
+        {PHASES.map((phase) => {
+          const value = averageRange(samples, phase.startIndex, phase.endIndex)
+          return (
+            <div key={phase.id} className={`swing-phaseCard swing-phaseCard--${phase.id}`}>
+              <div className="swing-phaseCard__header">
+                <h4>{phase.label}</h4>
+                <span>{phase.frameLabel}フレーム</span>
+              </div>
+              <strong>{formatHeight(value)}</strong>
+              <p>手首の平均Y座標</p>
+            </div>
+          )
+        })}
+      </div>
 
-      <p className={`swing-explanation__result${details?.triggered ? ' is-triggered' : ''}`}>{resultText}</p>
+      <div className="swing-metrics">
+        <div className="swing-metricCard">
+          <div className="swing-metricCard__title">15フレームの取得状況</div>
+          <div className="swing-barRow">
+            <span className="swing-barValue">
+              {samples.length}/{FRAME_COUNT}
+            </span>
+            <div className="swing-bar">
+              <div className="swing-bar__fill is-progress" style={{ width: `${progress}%` }} />
+            </div>
+            <span className="swing-barLimit">15フレームで判定</span>
+          </div>
+        </div>
+
+        <div className="swing-metricCard">
+          <div className="swing-metricCard__title">上から下への順序</div>
+          <div className="swing-conditionRow">
+            <span className={`swing-conditionChip ${orderOk ? 'is-ok' : 'is-ng'}`}>
+              上 &lt; 中 &lt; 下
+            </span>
+            <strong>{historyReady ? (orderOk ? '条件を満たす' : '条件を満たさない') : 'データ収集中'}</strong>
+          </div>
+        </div>
+
+        <div className="swing-metricCard">
+          <div className="swing-metricCard__title">振り下ろした移動量</div>
+          <div className="swing-barRow">
+            <span className="swing-barValue">{movement === null ? '—' : movement.toFixed(3)}</span>
+            <div className="swing-bar">
+              <div
+                className={`swing-bar__fill ${movementOk ? 'is-ok' : 'is-ng'}`}
+                style={{ width: `${movementProgress}%` }}
+              />
+              <div className="swing-bar__threshold" style={{ left: '100%' }} />
+            </div>
+            <span className="swing-barLimit">{MOVEMENT_THRESHOLD.toFixed(2)} 以上で OK</span>
+          </div>
+        </div>
+
+        <div className="swing-metricCard">
+          <div className="swing-metricCard__title">表示中データの再計算</div>
+          <div className="swing-summaryRow">
+            <span className={`swing-conditionChip ${localDetected ? 'is-ok' : 'is-ng'}`}>
+              {localDetected ? 'OK' : 'NG'}
+            </span>
+            <div>
+              <strong>現在値：{currentHeight.toFixed(3)}</strong>
+              <p>画面側でもバックエンドと同じ15フレーム条件を計算しています。</p>
+            </div>
+          </div>
+        </div>
+      </div>
     </section>
   )
 }
