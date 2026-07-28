@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from .action import action
-
+from .actions.hands import get_kamehameha_details
 
 class ActionEvaluator:
     def __init__(self) -> None:
@@ -24,6 +24,8 @@ class ActionEvaluator:
             "kamehameha": False,
             "kamehameha_continue": False,
         }
+
+        kamehameha_details = {}
 
         if pose_results.pose_landmarks:
             landmarks = pose_results.pose_landmarks.landmark
@@ -47,7 +49,21 @@ class ActionEvaluator:
             if len(hands) == 2:
                 actions["kamehameha"] = bool(self._action.is_kamehameha(hands[0], hands[1]))
                 actions["kamehameha_continue"] = self._action.judge_kamehameha(hands[0], hands[1])
+                kamehameha_details = (
+                    get_kamehameha_details(
+                        hands[0],
+                        hands[1],
+                    )
+                )
+                kamehameha_details[
+                    "holdDuration"
+                ] = 0.0
+
+                kamehameha_details[
+                    "holdDurationThreshold"
+                ] = 3.0
 
         action_details = {action_id: {} for action_id in actions}
         action_details["clap"] = self._action.clap_details
+        action_details["kamehameha"] = kamehameha_details
         return actions, action_details
