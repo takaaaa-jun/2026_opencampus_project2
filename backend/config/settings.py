@@ -104,5 +104,3 @@ if ENV_FILE.exists():
             if '=' in line and not line.startswith('#'):
                 key, val = line.split('=', 1)
                 os.environ[key.strip()] = val.strip()
-
-OPENCAMPUS_PASSWORD = os.environ.get('OPENCAMPUS_PASSWORD')

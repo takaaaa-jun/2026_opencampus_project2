@@ -1,0 +1,6 @@
+PythonバックエンドのWebRTC送信基盤
+MediaPipe検知結果をJSONへ変換してDataChannel送信
+ReactのuseWebRTC実装
+映像表示コンポーネント
+ExplanationPanelと説明コンポーネントの基盤
+動作ごとの説明コンポーネント
