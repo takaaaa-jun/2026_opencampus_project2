@@ -29,8 +29,8 @@ class ActionEvaluator:
             "kamehameha": False,
             "kamehameha_continue": False,
         }
-
         kamehameha_details = {}
+        cross_arms = self._action.reset_cross_arms()
 
         if pose_results.pose_landmarks:
             landmarks = pose_results.pose_landmarks.landmark
@@ -76,17 +76,11 @@ class ActionEvaluator:
                 )
             )
 
-            actions["closs"] = bool(
-                self._action.judge_closs_arms(
-                    pose_coordinates
-                )
-            )
+            cross_arms = self._action.evaluate_cross_arms(pose_coordinates)
+            actions["closs"] = cross_arms.result
 
-            actions["upper"] = (
-                self._action.judge_uppercut(
-                    pose_coordinates
-                )
-            )
+            upper = self._action.evaluate_upper(pose_coordinates)
+            actions["upper"] = upper.result
 
             actions["clap"] = (
                 self._action.judge_clap(
@@ -95,6 +89,7 @@ class ActionEvaluator:
             )
         else:
             self._action.reset_clap()
+            upper = self._action.reset_upper()
 
         hands = (
             hands_results.multi_hand_landmarks
@@ -149,6 +144,10 @@ class ActionEvaluator:
         action_details["kamehameha"] = (
             kamehameha_details
         )
+
+        action_details["closs"] = cross_arms.to_payload()
+
+        action_details["upper"] = upper.to_payload()
 
         if pose_results.pose_landmarks:
             action_details["tpose"] = (

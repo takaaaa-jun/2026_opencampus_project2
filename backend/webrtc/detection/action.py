@@ -2,6 +2,8 @@
 
 from .actions import geometry, hands, pose
 from .actions.clap import ClapDetector
+from .actions.cross_arms import CrossArmsDetector, CrossArmsEvaluation
+from .actions.upper import UpperDetector, UpperEvaluation
 from .actions.commands import ACTION_NAMES
 from .actions.hold import HoldDetector
 from .actions.jump import JumpDetector
@@ -14,7 +16,9 @@ class action:
         self._jump = JumpDetector()
         self._swing = SwingDetector()
         self._uppercut = UppercutDetector()
+        self._upper = UpperDetector()
         self._clap = ClapDetector()
+        self._cross_arms = CrossArmsDetector()
         self._tpose = HoldDetector(duration=1)
         self._surprise = HoldDetector(duration=1)
         self._kamehameha = HoldDetector(duration=3)
@@ -108,6 +112,21 @@ class action:
 
     def judge_closs_arms(self, landmarks):
         return pose.is_crossed_arms(landmarks)
+
+    def evaluate_cross_arms(self, landmarks) -> CrossArmsEvaluation:
+        return self._cross_arms.update(landmarks)
+
+    def reset_cross_arms(self) -> CrossArmsEvaluation:
+        return self._cross_arms.reset()
+
+    def judge_upper(self, landmarks):
+        return pose.is_upper(landmarks)
+
+    def evaluate_upper(self, landmarks) -> UpperEvaluation:
+        return self._upper.update(landmarks)
+
+    def reset_upper(self) -> UpperEvaluation:
+        return self._upper.reset()
 
     def judge_grab(self, hand):
         return hands.is_grab(hand)
