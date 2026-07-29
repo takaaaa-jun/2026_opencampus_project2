@@ -105,8 +105,8 @@ export function CrossArmsExplanation({ detectionData }: ExplanationProps) {
     return (
       <section className="crossarms">
         <div className="crossarms-emptyState">
-          <h3>十字腕の説明</h3>
-          <p>骨格を検出中です。バックエンドから十字腕の判定データが届くと表示します。</p>
+          <h3>ウルトラマンの説明</h3>
+          <p>骨格を検出中です。バックエンドからウルトラマンの判定データが届くと表示します。</p>
         </div>
       </section>
     )
