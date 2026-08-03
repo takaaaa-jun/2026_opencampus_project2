@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import type { ExplanationProps } from '../../types'
 import './SurpriseExplanation.css'
 
@@ -11,7 +11,7 @@ type ConditionId = 'hip_shoulder_elbow' | 'wrist_elbow_shoulder' | 'wrist_should
 
 type ConditionDetail = {
   title: string
-  summary: string
+  summary: ReactNode
   code: string
 }
 
@@ -20,7 +20,11 @@ const SURPRISE_DISPLAY_DURATION_MS = 1500
 const CONDITION_DETAILS: Record<ConditionId, ConditionDetail> = {
   hip_shoulder_elbow: {
     title: '腰-肩-肘の角度',
-    summary: '腰(23, 24)、肩(11, 12)、肘(13, 14)のなす角が左右とも 120°〜170° の範囲内にあるか判定します。両腕が上がっているかを確認します。',
+    summary: (
+      <>
+        腰・肩・肘のなす角を測ることで、<strong>両肘がしっかり上がっているか</strong>を判定します。これにより、普段の立ち姿勢や手が下がっている状態を誤って「驚かし」と検知するのを防ぎ、<strong>驚かす時の「腕が上がったポーズ」</strong>の前提条件として機能します。
+      </>
+    ),
     code: `# 腰(24, 23) - 肩(12, 11) - 肘(14, 13) の角度
 left_angle = angle(left_elbow, left_shoulder, left_hip)
 right_angle = angle(right_elbow, right_shoulder, right_hip)
@@ -31,7 +35,11 @@ hip_shoulder_elbow_passed = is_left_ok and is_right_ok`,
   },
   wrist_elbow_shoulder: {
     title: '手首-肘-肩の角度',
-    summary: '手首(15, 16)、肘(13, 14)、肩(11, 12)のなす角が左右とも 120°〜180° の範囲内にあるか判定します。肘が伸びて万歳に近い姿勢になっているかを確認します。',
+    summary: (
+      <>
+        手首・肘・肩の角度を測り、<strong>肘が適度に伸びているか</strong>を判定します。肘が深く曲がった縮こまった姿勢や胸の前での別の動作を排除し、<strong>相手を驚かせるための「大きく腕を広げたダイナミックなポーズ」</strong>を正確に識別するために必要です。
+      </>
+    ),
     code: `# 手首(16, 15) - 肘(14, 13) - 肩(12, 11) の角度
 left_angle = angle(left_shoulder, left_elbow, left_wrist)
 right_angle = angle(right_shoulder, right_elbow, right_wrist)
@@ -42,8 +50,12 @@ wrist_elbow_shoulder_passed = is_left_ok and is_right_ok`,
   },
   wrist_shoulder_distance: {
     title: '左右の手首の距離 ＞ 肩幅',
-    summary: '左右の手首の間隔（X座標の差）が、肩幅（X座標の差）よりも大きくなっているかを判定します。両手が外側に開いているかを確認します。',
-    code: `# 左右の手首の距離 > 肩幅の距離 (X軸の差)
+    summary: (
+      <>
+        <strong>左右の手首の幅が、肩幅よりも外側に開いているか</strong>を判定します。これにより、単に真上に手を挙げただけの万歳（他のポーズ）と区別し、<strong>体を左右に大きく見せて「ワッ！」と驚かせる特徴的な手の開き方</strong>を検知します。
+      </>
+    ),
+    code: `# 左右の手首の距離 > 肩幅の距離 (X軸 of 差)
 shoulder_width = abs(right_shoulder.x - left_shoulder.x)
 wrist_width = abs(right_wrist.x - left_wrist.x)
 
@@ -231,10 +243,9 @@ export function SurpriseExplanation({ detectionData }: ExplanationProps) {
       }
     : null
 
-  const resultText = surpriseDetected ? '驚かし！' : 'ポーズを検出中'
-
   return (
     <section className="surprise-explanation" aria-label="驚かす動作の判定過程">
+      <h4 className="surprise-explanation__title">判定の可視化</h4>
       <p className="surprise-explanation__lead">両腕を広げて万歳し、手が肩幅より外側に開いている姿勢を判定します</p>
 
       <div className="surprise-explanation__visualization">
@@ -313,17 +324,17 @@ export function SurpriseExplanation({ detectionData }: ExplanationProps) {
             />
 
             {/* 各関節点 */}
-            <circle cx={visualization.leftHip.x} cy={visualization.leftHip.y} r={0.012} className="surprise-explanation__joint-point" />
-            <circle cx={visualization.rightHip.x} cy={visualization.rightHip.y} r={0.012} className="surprise-explanation__joint-point" />
+            <circle cx={visualization.leftHip.x} cy={visualization.leftHip.y} r={0.018} className="surprise-explanation__joint-point" />
+            <circle cx={visualization.rightHip.x} cy={visualization.rightHip.y} r={0.018} className="surprise-explanation__joint-point" />
             
-            <circle cx={visualization.leftShoulder.x} cy={visualization.leftShoulder.y} r={0.014} className={`surprise-explanation__joint-point ${isLeftShoulderAngleOk ? 'is-ok' : ''}`} />
-            <circle cx={visualization.rightShoulder.x} cy={visualization.rightShoulder.y} r={0.014} className={`surprise-explanation__joint-point ${isRightShoulderAngleOk ? 'is-ok' : ''}`} />
+            <circle cx={visualization.leftShoulder.x} cy={visualization.leftShoulder.y} r={0.02} className={`surprise-explanation__joint-point ${isLeftShoulderAngleOk ? 'is-ok' : ''}`} />
+            <circle cx={visualization.rightShoulder.x} cy={visualization.rightShoulder.y} r={0.02} className={`surprise-explanation__joint-point ${isRightShoulderAngleOk ? 'is-ok' : ''}`} />
             
-            <circle cx={visualization.leftElbow.x} cy={visualization.leftElbow.y} r={0.012} className={`surprise-explanation__joint-point ${isLeftElbowAngleOk ? 'is-ok' : ''}`} />
-            <circle cx={visualization.rightElbow.x} cy={visualization.rightElbow.y} r={0.012} className={`surprise-explanation__joint-point ${isRightElbowAngleOk ? 'is-ok' : ''}`} />
+            <circle cx={visualization.leftElbow.x} cy={visualization.leftElbow.y} r={0.018} className={`surprise-explanation__joint-point ${isLeftElbowAngleOk ? 'is-ok' : ''}`} />
+            <circle cx={visualization.rightElbow.x} cy={visualization.rightElbow.y} r={0.018} className={`surprise-explanation__joint-point ${isRightElbowAngleOk ? 'is-ok' : ''}`} />
             
-            <circle cx={visualization.leftWrist.x} cy={visualization.leftWrist.y} r={0.014} className="surprise-explanation__wrist-point" />
-            <circle cx={visualization.rightWrist.x} cy={visualization.rightWrist.y} r={0.014} className="surprise-explanation__wrist-point" />
+            <circle cx={visualization.leftWrist.x} cy={visualization.leftWrist.y} r={0.02} className="surprise-explanation__wrist-point" />
+            <circle cx={visualization.rightWrist.x} cy={visualization.rightWrist.y} r={0.02} className="surprise-explanation__wrist-point" />
 
             {/* 点番号ラベル */}
             <text x={visualization.leftHip.x - 0.025} y={visualization.leftHip.y + 0.025} className="surprise-explanation__label-number">23</text>
@@ -369,6 +380,8 @@ export function SurpriseExplanation({ detectionData }: ExplanationProps) {
         </div>
       ) : null}
 
+      <h4 className="surprise-explanation__conditions-title">判定のアルゴリズム詳細（クリックしてプログラムを見てみてね）</h4>
+
       <ol className="surprise-explanation__conditions">
         <ConditionStep
           condition="hip_shoulder_elbow"
@@ -392,8 +405,6 @@ export function SurpriseExplanation({ detectionData }: ExplanationProps) {
           onSelect={(condition) => setSelectedCondition((current) => current === condition ? null : condition)}
         />
       </ol>
-
-      <p className={`surprise-explanation__result${surpriseDetected ? ' is-triggered' : ''}`}>{resultText}</p>
     </section>
   )
 }
