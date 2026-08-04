@@ -33,7 +33,7 @@ const explanationComponents: Record<AvailableExplanationId, ComponentType<Explan
   kamehameha: KamehamehaExplanation,
 }
 
-export function ExplanationPanel({ detectionData }: ExplanationPanelProps) {
+export function ExplanationPanel({ detectionData, isCameraStarted }: ExplanationPanelProps) {
   const [selectedExplanationId, setSelectedExplanationId] = useState<AvailableExplanationId>('tpose')
   const SelectedExplanation = explanationComponents[selectedExplanationId]
 
@@ -57,7 +57,7 @@ export function ExplanationPanel({ detectionData }: ExplanationPanelProps) {
           )
         })}
       </div>
-      <SelectedExplanation detectionData={detectionData} />
+      <SelectedExplanation detectionData={detectionData} isCameraStarted={isCameraStarted} />
     </section>
   )
 }

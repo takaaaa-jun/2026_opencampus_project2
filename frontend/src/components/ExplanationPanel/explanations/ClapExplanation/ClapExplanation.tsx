@@ -18,6 +18,22 @@ type ClapDetails = {
   isSeparatingAfterClose: boolean
   isCoolingDown: boolean
   triggered: boolean
+  normalizedDistance: number | null
+  closingSpeed: number | null
+}
+
+type MetricSample = {
+  distance: number | null
+  closingSpeed: number | null
+  hasApproached: boolean
+  isCloseEnough: boolean
+  isStopped: boolean
+  isSeparatingAfterClose: boolean
+}
+
+type ChartArea = {
+  value: number
+  label: string
 }
 
 type ConditionId = 'approach' | 'distance' | 'contact'
@@ -29,9 +45,10 @@ type ConditionDetail = {
   code: string
 }
 
+const CLAP_DISPLAY_DURATION_MS = 1500
+const METRIC_HISTORY_SIZE = 40
 const LEFT_PALM_POINTS = [15, 17, 19, 21]
 const RIGHT_PALM_POINTS = [16, 18, 20, 22]
-const CLAP_DISPLAY_DURATION_MS = 1500
 const CONDITION_DETAILS: Record<ConditionId, ConditionDetail> = {
   approach: {
     title: '手のひらが近づいた',
@@ -99,17 +116,17 @@ function isPoint(value: unknown): value is Point {
   return typeof point.x === 'number' && typeof point.y === 'number'
 }
 
+function numberOrNull(value: unknown): number | null {
+  return typeof value === 'number' && Number.isFinite(value) ? value : null
+}
+
 function getPoseLandmarks(detectionData: ExplanationProps['detectionData']): Array<Point | null> {
   if (detectionData === null || typeof detectionData.pose !== 'object' || detectionData.pose === null) {
     return []
   }
 
   const landmarks = (detectionData.pose as Record<string, unknown>).landmarks
-  if (!Array.isArray(landmarks)) {
-    return []
-  }
-
-  return landmarks.map((landmark) => (isPoint(landmark) ? landmark : null))
+  return Array.isArray(landmarks) ? landmarks.map((landmark) => (isPoint(landmark) ? landmark : null)) : []
 }
 
 function getClapDetails(detectionData: ExplanationProps['detectionData']): ClapDetails | null {
@@ -144,29 +161,138 @@ function getClapDetails(detectionData: ExplanationProps['detectionData']): ClapD
     isSeparatingAfterClose: details.isSeparatingAfterClose === true,
     isCoolingDown: details.isCoolingDown,
     triggered: details.triggered,
+    normalizedDistance: numberOrNull(details.normalizedDistance),
+    closingSpeed: numberOrNull(details.closingSpeed),
   }
 }
 
-function LandmarkGroup({ landmarks, indices, color }: { landmarks: Array<Point | null>; indices: number[]; color: string }) {
-  return (
-    <>
-      {indices.map((index) => {
-        const point = landmarks[index]
-        if (point === undefined || point === null) {
-          return null
-        }
+function useClapMetricHistory(
+  detectionData: ExplanationProps['detectionData'],
+  isPoseAvailable: boolean,
+  distance: number | null,
+  closingSpeed: number | null,
+  hasApproached: boolean,
+  isCloseEnough: boolean,
+  isStopped: boolean,
+  isSeparatingAfterClose: boolean,
+) {
+  const [history, setHistory] = useState<MetricSample[]>([])
 
-        return (
-          <g key={index}>
-            <circle cx={point.x} cy={point.y} r={0.012} fill={color} />
-            <text x={point.x + 0.018} y={point.y - 0.018} fontSize={0.032} className="clap-explanation__landmark-label">
-              {index}
-            </text>
-          </g>
-        )
-      })}
-    </>
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setHistory((current) => !isPoseAvailable
+        ? []
+        : [...current, { distance, closingSpeed, hasApproached, isCloseEnough, isStopped, isSeparatingAfterClose }].slice(-METRIC_HISTORY_SIZE))
+    }, 0)
+
+    return () => window.clearTimeout(timer)
+  }, [detectionData, isPoseAvailable, distance, closingSpeed, hasApproached, isCloseEnough, isStopped, isSeparatingAfterClose])
+
+  return history
+}
+
+function MetricChart({
+  title,
+  description,
+  values,
+  latestValue,
+  highlighted,
+  highlightLabel,
+  area,
+  approachActive,
+  contactDetected,
+}: {
+  title: string
+  description: string
+  values: Array<number | null>
+  latestValue: number | null
+  highlighted?: boolean[]
+  highlightLabel?: string
+  area?: ChartArea
+  approachActive?: boolean[]
+  contactDetected?: boolean[]
+}) {
+  const samples = values.filter((value): value is number => value !== null)
+  const chartValues = [...samples, ...(area === undefined ? [] : [area.value])]
+  const minimum = Math.min(...chartValues, 0)
+  const maximum = Math.max(...chartValues, 0.01)
+  const padding = (maximum - minimum) * 0.2 || 0.1
+  const min = minimum - padding
+  const max = maximum + padding
+  const width = 760
+  const height = 280
+  const left = 52
+  const right = 24
+  const top = 28
+  const bottom = 36
+  const x = (index: number) => left + (index / Math.max(values.length - 1, 1)) * (width - left - right)
+  const y = (value: number) => top + ((max - Math.max(min, Math.min(max, value))) / (max - min)) * (height - top - bottom)
+  const points = values
+    .map((value, index) => value === null ? null : `${x(index)},${y(value)}`)
+    .filter((point): point is string => point !== null)
+    .join(' ')
+
+  return (
+    <article className="clap-chart-card">
+      <div className="clap-chart-card__header">
+        <div><h2>{title}</h2><p>{description}</p></div>
+        <div className="clap-chart-card__current"><span>現在</span><strong>{latestValue === null ? '—' : latestValue.toFixed(2)}</strong></div>
+      </div>
+      <div className="clap-chart-card__legend" aria-label={`${title}のしきい値`}>
+        <strong>グラフの見方</strong>
+        <div className="clap-chart-card__legend-items">
+          {area !== undefined ? <span className="is-area"><i aria-hidden="true" />十分近い（0.35 以下）</span> : null}
+          {highlightLabel !== undefined ? <span className="is-highlight"><i aria-hidden="true" />速く近づいた（0.40 以上）</span> : null}
+          <span className="is-approach"><i aria-hidden="true" />近づいた判定を保持中</span>
+          <span className="is-contact"><i aria-hidden="true" />止まった／跳ね返った</span>
+        </div>
+      </div>
+      {samples.length >= 2 ? (
+        <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label={`${title}の直近${METRIC_HISTORY_SIZE}フレームの変化`} className="clap-chart">
+          {area !== undefined ? <rect x={left} y={y(area.value)} width={width - left - right} height={height - bottom - y(area.value)} className="clap-chart__area" /> : null}
+          <line x1={left} y1={y(0)} x2={width - right} y2={y(0)} className="clap-chart__zero" />
+          <polyline points={points} className="clap-chart__line" />
+          {approachActive?.map((isActive, index) => {
+            const previous = values[index - 1]
+            const current = values[index]
+            return index === 0 || !isActive || previous === null || previous === undefined || current === null || current === undefined ? null : <line key={index} x1={x(index - 1)} y1={y(previous)} x2={x(index)} y2={y(current)} className="clap-chart__approach-segment" />
+          })}
+          {contactDetected?.map((isContactDetected, index) => values[index] === null || !isContactDetected ? null : <circle key={index} cx={x(index)} cy={y(values[index]!)} r="7" className="clap-chart__contact-point" />)}
+          {highlighted?.map((isHighlighted, index) => values[index] === null || !isHighlighted ? null : <circle key={index} cx={x(index)} cy={y(values[index]!)} r="5" className="clap-chart__highlight-point" />)}
+          <text x={left} y={height - 8} className="clap-chart__axis-label is-start">40フレーム前</text>
+          <text x={width - right} y={height - 8} className="clap-chart__axis-label">現在</text>
+        </svg>
+      ) : <p className="clap-chart-card__empty">カメラを起動すると、ここに変化が表示されます</p>}
+    </article>
   )
+}
+
+function LandmarkGroup({ landmarks, indices, color }: { landmarks: Array<Point | null>; indices: number[]; color: string }) {
+  return <>
+    {indices.map((index) => {
+      const point = landmarks[index]
+      return point === undefined || point === null ? null : <g key={index}>
+        <circle cx={point.x} cy={point.y} r={0.018} fill={color} />
+        <text x={point.x + 0.025} y={point.y - 0.02} fontSize={0.04} className="clap-camera-guidance__landmark-label">{index}</text>
+      </g>
+    })}
+  </>
+}
+
+function PalmSkeletonLines({ landmarks, indices, color }: { landmarks: Array<Point | null>; indices: number[]; color: string }) {
+  const points = indices.map((index) => landmarks[index])
+  if (points.some((point) => point === undefined || point === null)) {
+    return null
+  }
+
+  const [wrist, pinky, indexFinger, thumb] = points as Point[]
+  return <g className="clap-camera-guidance__palm-lines" stroke={color}>
+    <line x1={wrist.x} y1={wrist.y} x2={pinky.x} y2={pinky.y} />
+    <line x1={wrist.x} y1={wrist.y} x2={indexFinger.x} y2={indexFinger.y} />
+    <line x1={wrist.x} y1={wrist.y} x2={thumb.x} y2={thumb.y} />
+    <line x1={pinky.x} y1={pinky.y} x2={indexFinger.x} y2={indexFinger.y} />
+    <line x1={indexFinger.x} y1={indexFinger.y} x2={thumb.x} y2={thumb.y} />
+  </g>
 }
 
 function ConditionStep({
@@ -320,33 +446,35 @@ function isClapDetected(detectionData: ExplanationProps['detectionData']) {
   return (detectionData.actions as Record<string, unknown>).clap === true
 }
 
-export function ClapExplanation({ detectionData }: ExplanationProps) {
+export function ClapExplanation({ detectionData, isCameraStarted }: ExplanationProps) {
   const [isClapVisible, setIsClapVisible] = useState(false)
   const [selectedCondition, setSelectedCondition] = useState<ConditionId | null>(null)
   const [view, setView] = useState<ClapView>('practice')
+  const [hasSeenHands, setHasSeenHands] = useState(false)
   const canShowNextClapRef = useRef(true)
   const clapTimerRef = useRef<number | null>(null)
   const landmarks = getPoseLandmarks(detectionData)
   const details = getClapDetails(detectionData)
-  const leftShoulder = landmarks[11]
-  const rightShoulder = landmarks[12]
-  const visualization = details !== null &&
+  const metricHistory = useClapMetricHistory(
+    detectionData,
+    details?.isPoseAvailable === true,
+    details?.normalizedDistance ?? null,
+    details?.closingSpeed ?? null,
+    details?.hasApproached === true,
+    details?.isCloseEnough === true,
+    details?.isStopped === true,
+    details?.isSeparatingAfterClose === true,
+  )
+  const hasHandsInFrame = details !== null &&
     details.isPoseAvailable &&
-    leftShoulder !== undefined && leftShoulder !== null &&
-    rightShoulder !== undefined && rightShoulder !== null &&
     details.leftPalmCenter !== null &&
     details.rightPalmCenter !== null
-    ? {
-        details,
-        leftShoulder,
-        rightShoulder,
-        leftPalmCenter: details.leftPalmCenter,
-        rightPalmCenter: details.rightPalmCenter,
-      }
-    : null
+  const leftShoulder = landmarks[11]
+  const rightShoulder = landmarks[12]
   const clapDetected = isClapDetected(detectionData)
   const backendHasApproached = details?.hasApproached === true
   const resultText = details?.triggered ? 'たたく！' : details?.isCoolingDown ? '判定後の待機中' : '動きを検出中'
+  const showCameraGuidance = isCameraStarted && !hasSeenHands
 
   useEffect(() => {
     if (!clapDetected && !isClapVisible) {
@@ -371,6 +499,21 @@ export function ClapExplanation({ detectionData }: ExplanationProps) {
     }
   }, [])
 
+  useEffect(() => {
+    if (!isCameraStarted) {
+      const resetTimer = window.setTimeout(() => setHasSeenHands(false), 0)
+      return () => window.clearTimeout(resetTimer)
+    }
+
+    if (!hasHandsInFrame || hasSeenHands) {
+      return
+    }
+
+    const timer = window.setTimeout(() => setHasSeenHands(true), 5000)
+
+    return () => window.clearTimeout(timer)
+  }, [isCameraStarted, hasHandsInFrame, hasSeenHands])
+
   return (
     <section className="clap-explanation" aria-label="たたく動作の判定過程">
       <div className="clap-explanation__view-tabs" role="tablist" aria-label="たたくの表示内容">
@@ -381,33 +524,38 @@ export function ClapExplanation({ detectionData }: ExplanationProps) {
       {view === 'guide' ? <ClapGuide onStartPractice={() => setView('practice')} /> : <>
       <p className="clap-explanation__lead">手のひらが近づき、近い位置で動きが止まる流れで、たたく動作を判定します</p>
 
-      <div className="clap-explanation__visualization">
-        {visualization !== null ? (
-          <svg viewBox="0 0 1 1" role="img" aria-label="肩幅と左右の手のひら中心">
-            <line x1={visualization.leftShoulder.x} y1={visualization.leftShoulder.y} x2={visualization.rightShoulder.x} y2={visualization.rightShoulder.y} className="clap-explanation__shoulder-line" />
-            <circle cx={visualization.leftShoulder.x} cy={visualization.leftShoulder.y} r={0.014} className="clap-explanation__shoulder-point" />
-            <circle cx={visualization.rightShoulder.x} cy={visualization.rightShoulder.y} r={0.014} className="clap-explanation__shoulder-point" />
-            <text x={(visualization.leftShoulder.x + visualization.rightShoulder.x) / 2} y={(visualization.leftShoulder.y + visualization.rightShoulder.y) - 0.03} fontSize={0.032} className="clap-explanation__line-label">肩幅</text>
+      {showCameraGuidance ? <div className="clap-camera-guidance" role="dialog" aria-modal="true" aria-label="カメラ位置の案内">
+        <div className="clap-camera-guidance__card">
+          <p>準備しよう</p>
+          <h2>両手と肩が画面に映る位置に立ってね</h2>
+          <div className="clap-camera-guidance__skeleton">
+            {leftShoulder !== undefined && leftShoulder !== null && rightShoulder !== undefined && rightShoulder !== null ? <svg viewBox="0 0 1 1" role="img" aria-label="検出中の手と肩の骨格点">
+              <line x1={leftShoulder.x} y1={leftShoulder.y} x2={rightShoulder.x} y2={rightShoulder.y} className="clap-camera-guidance__shoulder-line" />
+              <circle cx={leftShoulder.x} cy={leftShoulder.y} r={0.018} className="clap-camera-guidance__shoulder-dot" />
+              <circle cx={rightShoulder.x} cy={rightShoulder.y} r={0.018} className="clap-camera-guidance__shoulder-dot" />
+              <PalmSkeletonLines landmarks={landmarks} indices={LEFT_PALM_POINTS} color="#0ea5e9" />
+              <PalmSkeletonLines landmarks={landmarks} indices={RIGHT_PALM_POINTS} color="#a855f7" />
+              <LandmarkGroup landmarks={landmarks} indices={LEFT_PALM_POINTS} color="#0ea5e9" />
+              <LandmarkGroup landmarks={landmarks} indices={RIGHT_PALM_POINTS} color="#a855f7" />
+            </svg> : <span className="clap-camera-guidance__searching">骨格点を探しています…</span>}
+          </div>
+          <span>検出できると自動で始まります</span>
+        </div>
+      </div> : null}
+      {isClapVisible ? <p className="clap-explanation__detected" role="status">CLAP</p> : null}
 
-            <LandmarkGroup landmarks={landmarks} indices={LEFT_PALM_POINTS} color="#0ea5e9" />
-            <LandmarkGroup landmarks={landmarks} indices={RIGHT_PALM_POINTS} color="#a855f7" />
-
-            <line
-              x1={visualization.leftPalmCenter.x}
-              y1={visualization.leftPalmCenter.y}
-              x2={visualization.rightPalmCenter.x}
-              y2={visualization.rightPalmCenter.y}
-              className={visualization.details.isCloseEnough ? 'clap-explanation__palm-line is-close' : 'clap-explanation__palm-line'}
-            />
-            <circle cx={visualization.leftPalmCenter.x} cy={visualization.leftPalmCenter.y} r={0.022} className="clap-explanation__palm-center left" />
-            <circle cx={visualization.rightPalmCenter.x} cy={visualization.rightPalmCenter.y} r={0.022} className="clap-explanation__palm-center right" />
-            <text x={visualization.leftPalmCenter.x} y={visualization.leftPalmCenter.y - 0.035} fontSize={0.03} className="clap-explanation__center-label">左の中心</text>
-            <text x={visualization.rightPalmCenter.x} y={visualization.rightPalmCenter.y - 0.035} fontSize={0.03} className="clap-explanation__center-label">右の中心</text>
-          </svg>
-        ) : (
-          <p className="clap-explanation__waiting">肩と両手が映るように、少し離れて立ってね</p>
-        )}
-        {isClapVisible ? <p className="clap-explanation__detected" role="status">CLAP</p> : null}
+      <div className="clap-charts" aria-label="たたく判定の数値変化">
+        <MetricChart
+          title="手のひら中心の距離"
+          description="肩幅で割った、左右の手の近さ"
+          values={metricHistory.map((sample) => sample.distance)}
+          latestValue={details?.normalizedDistance ?? null}
+          highlighted={metricHistory.map((sample) => (sample.closingSpeed ?? Number.NEGATIVE_INFINITY) >= 0.4)}
+          highlightLabel="青い点：近づく速度が 0.40 以上"
+          area={{ value: 0.35, label: '緑の領域：十分近い（0.35 以下）' }}
+          approachActive={metricHistory.map((sample) => sample.hasApproached)}
+          contactDetected={metricHistory.map((sample) => sample.hasApproached && sample.isCloseEnough && (sample.isStopped || sample.isSeparatingAfterClose))}
+        />
       </div>
 
       {selectedCondition !== null ? (

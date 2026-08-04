@@ -78,7 +78,7 @@ function App() {
           </div>
           <VideoPanel cameraStream={cameraStream} skeletonStream={skeletonStream} />
         </div>
-        <ExplanationPanel detectionData={detectionData} />
+        <ExplanationPanel detectionData={detectionData} isCameraStarted={isCameraStarted} />
       </section>
     </main>
   )
