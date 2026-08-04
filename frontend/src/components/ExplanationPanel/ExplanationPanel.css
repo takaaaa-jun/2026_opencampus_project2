@@ -5,6 +5,10 @@
   align-content: start;
   gap: 24px;
   min-width: 0;
+  min-height: 0;
+  padding-right: 8px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .explanation-selector {
@@ -34,5 +38,7 @@
 @media (max-width: 800px) {
   .explanation-panel {
     grid-column: 1;
+    padding-right: 0;
+    overflow: visible;
   }
 }

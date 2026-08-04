@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import clapHandIllustration from '../../../../assets/clap-hand.png'
 import type { ExplanationProps } from '../../types'
 import './ClapExplanation.css'
 
@@ -20,6 +21,7 @@ type ClapDetails = {
 }
 
 type ConditionId = 'approach' | 'distance' | 'contact'
+type ClapView = 'practice' | 'guide'
 
 type ConditionDetail = {
   title: string
@@ -237,6 +239,79 @@ function ConditionDetailPanel({ condition, onClose }: { condition: ConditionId; 
   )
 }
 
+function ClapGuide({ onStartPractice }: { onStartPractice: () => void }) {
+  return (
+    <div className="clap-guide">
+      <header className="clap-guide__hero">
+        <p className="clap-guide__eyebrow">動作を知る</p>
+        <h2>たたくとは、両手を近づけて合わせる動作です</h2>
+        <p>離れた手が近づき、接触した直後に止まる、または跳ね返る流れを確認します。</p>
+      </header>
+
+      <section className="clap-guide__section" aria-labelledby="clap-motion-title">
+        <h3 id="clap-motion-title">1. たたく動作の流れ</h3>
+        <ol className="clap-guide__motion">
+          <li><span>1</span><strong>手を離す</strong><small>左右の手のひら中心に距離がある</small></li>
+          <li><span>2</span><strong>手を近づける</strong><small>距離が短くなる速さを測る</small></li>
+          <li><span>3</span><strong>手を合わせる</strong><small>近い位置で停止・反転する</small></li>
+        </ol>
+      </section>
+
+      <section className="clap-guide__section" aria-labelledby="clap-points-title">
+        <h3 id="clap-points-title">2. 使う骨格点</h3>
+        <p>左右の手首・小指・人差し指・親指の付け根に当たる4点を平均し、それぞれの<strong>手のひら中心</strong>を求めます。</p>
+        <svg className="clap-guide__point-diagram" viewBox="0 0 640 300" role="img" aria-label="手のイラストに重ねた、たたく判定で使う骨格点">
+          <line x1="245" y1="38" x2="395" y2="38" className="clap-guide__shoulder-line" />
+          <circle cx="245" cy="38" r="8" className="clap-guide__shoulder-dot" />
+          <circle cx="395" cy="38" r="8" className="clap-guide__shoulder-dot" />
+          <text x="320" y="24" className="clap-guide__diagram-label">肩幅の基準（11・12）</text>
+
+          <image href={clapHandIllustration} x="26" y="38" width="270" height="250" className="clap-guide__hand-image" />
+          <image href={clapHandIllustration} x="26" y="38" width="270" height="250" transform="translate(640 0) scale(-1 1)" className="clap-guide__hand-image" />
+          <line x1="167" y1="177" x2="473" y2="177" className="clap-guide__distance-line" />
+          <text x="320" y="135" className="clap-guide__diagram-label clap-guide__distance-label">左右の手のひら中心の距離</text>
+          <g className="clap-guide__landmarks is-left">
+            <circle cx="160" cy="250" r="8" className="clap-guide__palm-dot" /><text x="160" y="276" className="clap-guide__diagram-label">15</text>
+            <circle cx="198" cy="150" r="8" className="clap-guide__palm-dot" /><text x="214" y="146" className="clap-guide__diagram-label">17</text>
+            <circle cx="138" cy="142" r="8" className="clap-guide__palm-dot" /><text x="138" y="128" className="clap-guide__diagram-label">19</text>
+            <circle cx="112" cy="164" r="8" className="clap-guide__palm-dot" /><text x="98" y="159" className="clap-guide__diagram-label">21</text>
+            <circle cx="152" cy="177" r="14" className="clap-guide__palm-center-dot" /><text x="152" y="203" className="clap-guide__diagram-label">左の中心</text>
+          </g>
+          <g className="clap-guide__landmarks is-right">
+            <circle cx="480" cy="250" r="8" className="clap-guide__palm-dot" /><text x="480" y="276" className="clap-guide__diagram-label">16</text>
+            <circle cx="442" cy="150" r="8" className="clap-guide__palm-dot" /><text x="426" y="146" className="clap-guide__diagram-label">18</text>
+            <circle cx="502" cy="142" r="8" className="clap-guide__palm-dot" /><text x="502" y="128" className="clap-guide__diagram-label">20</text>
+            <circle cx="528" cy="164" r="8" className="clap-guide__palm-dot" /><text x="542" y="159" className="clap-guide__diagram-label">22</text>
+            <circle cx="488" cy="177" r="14" className="clap-guide__palm-center-dot" /><text x="488" y="203" className="clap-guide__diagram-label">右の中心</text>
+          </g>
+
+        </svg>
+      </section>
+
+      <section className="clap-guide__section" aria-labelledby="clap-logic-title">
+        <h3 id="clap-logic-title">3. 判定のしくみ</h3>
+        <ol className="clap-guide__logic">
+          <li><strong>近づいたか</strong><p>肩幅を1とした距離が1秒あたり0.4以上短くなる状態を、2フレーム以上確認します。</p></li>
+          <li><strong>十分に近いか</strong><p>手のひら中心間の距離を肩幅で割り、肩幅の35%以下かを確認します。</p></li>
+          <li><strong>接触らしい変化があるか</strong><p>近い位置で速さが0.15以下に落ちる、または0.15以上の速さで離れる向きへ変われば、たたくと判定します。</p></li>
+        </ol>
+        <p className="clap-guide__formula">手の近さ ＝ 左右の手のひら中心の距離 ÷ 肩幅</p>
+      </section>
+
+      <section className="clap-guide__section" aria-labelledby="clap-reason-title">
+        <h3 id="clap-reason-title">4. なぜこれで分かるのか</h3>
+        <dl className="clap-guide__reasons">
+          <div><dt>距離だけでは不十分</dt><dd>胸の前で両手がすれ違うだけでも距離は短くなるため、接近の速さと接触後の変化も確認します。</dd></div>
+          <div><dt>肩幅で割る理由</dt><dd>カメラからの距離や体格が違っても、身体に対する手の近さとして同じ基準で比べられます。</dd></div>
+          <div><dt>停止・跳ね返りを見る理由</dt><dd>手を合わせると運動が止まるか反対向きに変わるため、単なる通過動作を除外できます。</dd></div>
+        </dl>
+      </section>
+
+      <button type="button" className="clap-guide__practice-button" onClick={onStartPractice}>実際にためす</button>
+    </div>
+  )
+}
+
 function isClapDetected(detectionData: ExplanationProps['detectionData']) {
   if (detectionData === null || typeof detectionData.actions !== 'object' || detectionData.actions === null) {
     return false
@@ -248,6 +323,7 @@ function isClapDetected(detectionData: ExplanationProps['detectionData']) {
 export function ClapExplanation({ detectionData }: ExplanationProps) {
   const [isClapVisible, setIsClapVisible] = useState(false)
   const [selectedCondition, setSelectedCondition] = useState<ConditionId | null>(null)
+  const [view, setView] = useState<ClapView>('practice')
   const canShowNextClapRef = useRef(true)
   const clapTimerRef = useRef<number | null>(null)
   const landmarks = getPoseLandmarks(detectionData)
@@ -297,6 +373,12 @@ export function ClapExplanation({ detectionData }: ExplanationProps) {
 
   return (
     <section className="clap-explanation" aria-label="たたく動作の判定過程">
+      <div className="clap-explanation__view-tabs" role="tablist" aria-label="たたくの表示内容">
+        <button type="button" role="tab" aria-selected={view === 'practice'} className={view === 'practice' ? 'is-selected' : ''} onClick={() => setView('practice')}>ためす</button>
+        <button type="button" role="tab" aria-selected={view === 'guide'} className={view === 'guide' ? 'is-selected' : ''} onClick={() => setView('guide')}>しくみを知る</button>
+      </div>
+
+      {view === 'guide' ? <ClapGuide onStartPractice={() => setView('practice')} /> : <>
       <p className="clap-explanation__lead">手のひらが近づき、近い位置で動きが止まる流れで、たたく動作を判定します</p>
 
       <div className="clap-explanation__visualization">
@@ -359,6 +441,7 @@ export function ClapExplanation({ detectionData }: ExplanationProps) {
       </ol>
 
       <p className={`clap-explanation__result${details?.triggered ? ' is-triggered' : ''}`}>{resultText}</p>
+      </>}
     </section>
   )
 }

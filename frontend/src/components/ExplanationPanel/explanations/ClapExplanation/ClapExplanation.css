@@ -3,6 +3,229 @@
   gap: 20px;
 }
 
+.clap-explanation__view-tabs {
+  display: flex;
+  gap: 8px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #cbd5e1;
+}
+
+.clap-explanation__view-tabs button {
+  padding: 9px 14px;
+  border: 1px solid #94a3b8;
+  border-radius: 999px;
+  color: #334155;
+  background: #fff;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.clap-explanation__view-tabs button.is-selected {
+  border-color: #0284c7;
+  color: #075985;
+  background: #e0f2fe;
+}
+
+.clap-guide {
+  display: grid;
+  gap: 16px;
+}
+
+.clap-guide__hero,
+.clap-guide__section {
+  padding: 20px;
+  border: 1px solid #cbd5e1;
+  border-radius: 16px;
+  background: #fff;
+}
+
+.clap-guide__hero {
+  border-color: #7dd3fc;
+  background: linear-gradient(135deg, #f0f9ff, #fff);
+}
+
+.clap-guide__eyebrow {
+  margin: 0 0 6px;
+  color: #0369a1;
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.clap-guide h2,
+.clap-guide h3,
+.clap-guide p {
+  margin-top: 0;
+}
+
+.clap-guide h2 {
+  margin-bottom: 10px;
+  color: #0f172a;
+  font-size: 1.3rem;
+}
+
+.clap-guide h3 {
+  margin-bottom: 12px;
+  color: #0f172a;
+  font-size: 1.05rem;
+}
+
+.clap-guide__hero > p:last-child,
+.clap-guide__section > p {
+  margin-bottom: 0;
+  color: #475569;
+  line-height: 1.7;
+}
+
+.clap-guide__motion,
+.clap-guide__logic {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.clap-guide__motion {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.clap-guide__motion li {
+  display: grid;
+  gap: 6px;
+  padding: 14px;
+  border-radius: 12px;
+  background: #f1f5f9;
+}
+
+.clap-guide__motion span {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  border-radius: 50%;
+  color: #fff;
+  background: #0284c7;
+  font-size: 0.85rem;
+  font-weight: 800;
+}
+
+.clap-guide__motion small {
+  color: #475569;
+  line-height: 1.5;
+}
+
+.clap-guide__point-diagram {
+  width: 100%;
+  height: auto;
+  margin: 14px 0;
+  border-radius: 12px;
+  background: #f8fafc;
+}
+
+.clap-guide__shoulder-line,
+.clap-guide__distance-line {
+  stroke: #64748b;
+  stroke-width: 3;
+  stroke-dasharray: 7 5;
+}
+
+.clap-guide__distance-line {
+  stroke: #16a34a;
+}
+
+.clap-guide__shoulder-dot { fill: #64748b; }
+
+.clap-guide__palm-dot { fill: #0284c7; stroke: #fff; stroke-width: 3; }
+.clap-guide__palm-center-dot { fill: #0369a1; }
+.clap-guide__landmarks.is-right .clap-guide__palm-dot { fill: #9333ea; }
+.clap-guide__landmarks.is-right .clap-guide__palm-center-dot { fill: #7e22ce; }
+
+.clap-guide__palm-center-dot {
+  stroke: #fff;
+  stroke-width: 4;
+}
+
+.clap-guide__diagram-label {
+  fill: #334155;
+  font-size: 13px;
+  font-weight: 700;
+  text-anchor: middle;
+}
+
+.clap-guide__logic {
+  counter-reset: logic;
+}
+
+.clap-guide__logic li {
+  position: relative;
+  padding: 14px 14px 14px 48px;
+  border-left: 3px solid #38bdf8;
+  background: #f8fafc;
+}
+
+.clap-guide__logic li::before {
+  position: absolute;
+  left: 14px;
+  counter-increment: logic;
+  content: counter(logic);
+  color: #0369a1;
+  font-weight: 800;
+}
+
+.clap-guide__logic p {
+  margin: 5px 0 0;
+  color: #475569;
+  line-height: 1.65;
+}
+
+.clap-guide__formula {
+  margin: 14px 0 0 !important;
+  padding: 12px;
+  border-radius: 8px;
+  color: #0f172a !important;
+  background: #e0f2fe;
+  font-weight: 800;
+  text-align: center;
+}
+
+.clap-guide__reasons {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+}
+
+.clap-guide__reasons div {
+  padding: 12px;
+  border-radius: 10px;
+  background: #f8fafc;
+}
+
+.clap-guide__reasons dt {
+  margin-bottom: 4px;
+  color: #0f172a;
+  font-weight: 800;
+}
+
+.clap-guide__reasons dd {
+  margin: 0;
+  color: #475569;
+  line-height: 1.65;
+}
+
+.clap-guide__practice-button {
+  justify-self: center;
+  padding: 12px 20px;
+  border: 0;
+  border-radius: 999px;
+  color: #fff;
+  background: #0284c7;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+
 .clap-explanation__lead {
   margin: 0;
   color: #334155;
@@ -272,5 +495,9 @@
   .clap-explanation__visualization svg {
     min-height: 260px;
     height: 260px;
+  }
+
+  .clap-guide__motion {
+    grid-template-columns: 1fr;
   }
 }

@@ -1,8 +1,10 @@
 .rtc-foundation {
   display: grid;
-  min-height: 100svh;
+  height: 100svh;
+  min-height: 0;
   align-items: start;
   padding: 32px;
+  overflow: hidden;
   background: #ffffff;
   color: #111827;
 }
@@ -12,6 +14,8 @@
   /* 左列はVideoPanel、右列は将来のExplanationPanel用。 */
   grid-template-columns: minmax(0, 4fr) minmax(0, 6fr);
   width: 100%;
+  height: 100%;
+  min-height: 0;
   gap: 20px 40px;
 }
 
@@ -96,10 +100,14 @@
 
 @media (max-width: 800px) {
   .rtc-foundation {
+    height: auto;
+    min-height: 100svh;
     padding: 16px;
+    overflow: visible;
   }
 
   .rtc-foundation__layout {
     grid-template-columns: 1fr;
+    height: auto;
   }
 }
