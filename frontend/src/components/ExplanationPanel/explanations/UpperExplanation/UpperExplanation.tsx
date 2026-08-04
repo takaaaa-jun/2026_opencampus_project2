@@ -294,7 +294,7 @@ export function UpperExplanation({ detectionData }: ExplanationProps) {
   return (
     <section className="upperPanel">
       <p className="crossarms-intro">
-        アッパーは体の正面で手を振り上げる動作です。肩の高さより下から上へ手が移動し、左右の肩の間を通っているかを判定することで、体の正面で行われているかを確認しています。腕を振り上げる閾値は肩幅の0.5倍の距離を採用しています。
+        アッパーは体の正面で手を振り上げる動作です。肩の高さより下から上へ手首が移動し、左右の肩の間を通っているかを判定することで、体の正面で行われているかを確認しています。手首の上昇判定の閾値は肩幅の0.5倍の距離を採用しています。
       </p>
       <header className="upperIntro">
         <div className={`crossarms-hero ${overallOk ? 'crossarms-hero--ok' : 'crossarms-hero--ng'}`}>
