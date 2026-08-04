@@ -114,6 +114,9 @@ export function CrossArmsExplanation({ detectionData }: ExplanationProps) {
 
   return (
     <section className="crossarms crossarms--compact">
+      <p className="crossarms-intro">
+        ウルトラマンのポーズは、腕を十字にする動作です。各腕の角度を確認し、それぞれが横向き・縦向きの閾値（±{details.angleToleranceDeg}°）内に収まっているか、さらに左右の腕の距離が十分近いかを調べることで判定しています。
+      </p>
       <div className={`crossarms-hero ${details.result ? 'crossarms-hero--ok' : 'crossarms-hero--ng'}`}>
         <div className="crossarms-hero__icon">{details.result ? '✓' : '!'}</div>
         <div className="crossarms-hero__content">
