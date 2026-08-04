@@ -547,7 +547,7 @@ export function TPoseExplanation({ detectionData }: ExplanationProps) {
           className={`tpose-explanation__tab ${activeTab === 'algorithm' ? 'is-active' : ''}`}
           onClick={() => setActiveTab('algorithm')}
         >
-          アルゴリズム解説
+          十字架判定のしくみ
         </button>
       </div>
 
@@ -641,12 +641,14 @@ export function TPoseExplanation({ detectionData }: ExplanationProps) {
 
       {activeTab === 'algorithm' && (
         <div className="tpose-explanation__algorithm">
-          <div className="tpose-explanation__alg-layout">
+          <div className="tpose-explanation__body">
             
-            {/* 左側: フローチャート */}
-            <div className="tpose-explanation__flowchart">
-              <div className="tpose-explanation__flowchart-header">
-                <h3 className="tpose-explanation__flowchart-title">十字架の判定アルゴリズム</h3>
+            {/* 左側: 視覚化（骨格）パネル */}
+            <div className="tpose-explanation__visual-panel">
+              <div className="tpose-explanation__figure-wrap">
+                <PictogramFigure details={details} landmarks={_landmarks} selectedCondition={selectedCondition} />
+              </div>
+              <div className="tpose-explanation__code-btn-container" style={{ marginTop: '1rem', textAlign: 'center' }}>
                 <button 
                   className="tpose-explanation__view-code-btn"
                   onClick={() => setIsCodeModalOpen(true)}
@@ -654,120 +656,16 @@ export function TPoseExplanation({ detectionData }: ExplanationProps) {
                   実際のコードを見る
                 </button>
               </div>
-
-              <div className="flowchart-container">
-                {/* 1段目: 現在の角度 */}
-                <div className="flowchart-step-label">1. 角度計算</div>
-                <div className="flowchart-row flowchart-row--4col">
-                  <div className="flowchart-box">
-                    <span className="flowchart-label">左肘角度</span>
-                    <span className="flowchart-var">left_elbow_angle</span>
-                    <span className="flowchart-value">{details ? details.left_elbow_angle : '-'}°</span>
-                  </div>
-                  <div className="flowchart-box">
-                    <span className="flowchart-label">左肩角度</span>
-                    <span className="flowchart-var">left_shoulder_angle</span>
-                    <span className="flowchart-value">{details ? details.left_shoulder_angle : '-'}°</span>
-                  </div>
-                  <div className="flowchart-box">
-                    <span className="flowchart-label">右肩角度</span>
-                    <span className="flowchart-var">right_shoulder_angle</span>
-                    <span className="flowchart-value">{details ? details.right_shoulder_angle : '-'}°</span>
-                  </div>
-                  <div className="flowchart-box">
-                    <span className="flowchart-label">右肘角度</span>
-                    <span className="flowchart-var">right_elbow_angle</span>
-                    <span className="flowchart-value">{details ? details.right_elbow_angle : '-'}°</span>
-                  </div>
-                </div>
-
-                {/* 下矢印 */}
-                <div className="flowchart-row flowchart-row--4col flowchart-arrows">
-                  <div className="flowchart-arrow"></div>
-                  <div className="flowchart-arrow"></div>
-                  <div className="flowchart-arrow"></div>
-                  <div className="flowchart-arrow"></div>
-                </div>
-
-                {/* 2段目: 角度条件判定 */}
-                <div className="flowchart-step-label">2. 各部位の条件判定</div>
-                <div className="flowchart-row flowchart-row--4col">
-                  <div className={`flowchart-box ${details?.is_left_elbow_ok ? 'is-ok' : 'is-ng'}`}>
-                    <span className="flowchart-label">左肘条件(150~180)</span>
-                    <span className="flowchart-var">is_left_elbow_ok</span>
-                    <span className="flowchart-value">{details?.is_left_elbow_ok ? 'True' : 'False'}</span>
-                  </div>
-                  <div className={`flowchart-box ${details?.is_left_shoulder_ok ? 'is-ok' : 'is-ng'}`}>
-                    <span className="flowchart-label">左肩条件(80~100)</span>
-                    <span className="flowchart-var">is_left_shoulder_ok</span>
-                    <span className="flowchart-value">{details?.is_left_shoulder_ok ? 'True' : 'False'}</span>
-                  </div>
-                  <div className={`flowchart-box ${details?.is_right_shoulder_ok ? 'is-ok' : 'is-ng'}`}>
-                    <span className="flowchart-label">右肩条件(80~100)</span>
-                    <span className="flowchart-var">is_right_shoulder_ok</span>
-                    <span className="flowchart-value">{details?.is_right_shoulder_ok ? 'True' : 'False'}</span>
-                  </div>
-                  <div className={`flowchart-box ${details?.is_right_elbow_ok ? 'is-ok' : 'is-ng'}`}>
-                    <span className="flowchart-label">右肘条件(150~180)</span>
-                    <span className="flowchart-var">is_right_elbow_ok</span>
-                    <span className="flowchart-value">{details?.is_right_elbow_ok ? 'True' : 'False'}</span>
-                  </div>
-                </div>
-
-                {/* 集合矢印 */}
-                <div className="flowchart-merge-arrows">
-                  <svg width="100%" height="20" style={{ display: 'block', overflow: 'visible' }}>
-                    {/* 4本の縦線（下へ20px） */}
-                    <line x1="12.5%" y1="0" x2="12.5%" y2="20" stroke="#64748b" strokeWidth="3" />
-                    <line x1="37.5%" y1="0" x2="37.5%" y2="20" stroke="#64748b" strokeWidth="3" />
-                    <line x1="62.5%" y1="0" x2="62.5%" y2="20" stroke="#64748b" strokeWidth="3" />
-                    <line x1="87.5%" y1="0" x2="87.5%" y2="20" stroke="#64748b" strokeWidth="3" />
-                    {/* 1本の横線（左端から右端まで） */}
-                    <line x1="12.5%" y1="18.5" x2="87.5%" y2="18.5" stroke="#64748b" strokeWidth="3" />
-                  </svg>
-                  <div className="flowchart-arrow-center"></div>
-                </div>
-
-                {/* 3段目: is_pose_valid */}
-                <div className="flowchart-step-label">3. 全部位が条件を満たしているか</div>
-                <div className="flowchart-row flowchart-row--center">
-                  <div className={`flowchart-box flowchart-box--large ${details?.is_pose_valid ? 'is-ok' : 'is-ng'}`}>
-                    <span className="flowchart-label">is_pose_valid</span>
-                    <span className="flowchart-value">{details?.is_pose_valid ? 'True' : 'False'}</span>
-                  </div>
-                </div>
-
-                {/* 下矢印 */}
-                <div className="flowchart-row flowchart-row--center flowchart-arrows">
-                  <div className="flowchart-arrow"></div>
-                </div>
-
-                {/* 4段目: タイマー */}
-                <div className="flowchart-step-label">4. 1秒継続</div>
-                <div className="flowchart-row flowchart-row--center">
-                  <div className={`flowchart-box flowchart-box--timer ${details?.triggered ? 'is-ok' : ''}`}>
-                    <span className="flowchart-label">
-                      {details?.is_pose_valid ? '1秒タイマー 計測中...' : 'タイマー リセット'}
-                    </span>
-                    <div className="flowchart-timer-bar">
-                      <div className="flowchart-timer-fill" style={{ width: `${Math.min(Math.max(holdProgress, 0), 1) * 100}%` }} />
-                    </div>
-                    <span className="flowchart-value">{details?.triggered ? '検知成功！' : `${(holdProgress * 1.0).toFixed(2)} / 1.0秒`}</span>
-                  </div>
-                </div>
-
-              </div>
             </div>
 
-            {/* 右側: テキスト解説 */}
+            {/* 右側: 解説パネル */}
             <div className="tpose-explanation__text-section">
-              <h3 className="tpose-explanation__text-title">補足解説</h3>
+              <h3 className="tpose-explanation__text-title">十字架の判定のしくみ</h3>
               
               <div className="tpose-explanation__text-block">
                 <h4>十字架とは</h4>
                 <p>
-                  両腕を横に水平に広げて、体全体でT字(十字)を作るポーズです。<br/>
-                  このシステムでは、カメラ映像からMediaPipeで検出した骨格点の位置をもとに、十字のポーズの見た目から、腰-肩のラインが垂直、肩-肘のラインが水平になっていること(=腰-肩-肘の角度が約90°)、そして肩-肘-手首がほぼ一直線であること(=約180°)を利用して判定しています。
+                  両腕を横に水平に広げて、体全体でT字(十字)を作るポーズです。
                 </p>
               </div>
 
@@ -783,11 +681,31 @@ export function TPoseExplanation({ detectionData }: ExplanationProps) {
               </div>
 
               <div className="tpose-explanation__text-block">
-                <h4>なぜ1秒間キープが必要か</h4>
-                <p>
-                  角度の条件だけだと、腕を振り回したときに一瞬だけ十字の形になっただけでも反応してしまいます。<br/>
-                  そこで、<strong>1秒間ずっと条件を満たし続けたとき</strong>だけ「十字架」として検知するようにしています。これで、意図していない動作での誤反応を防いでいます。
+                <h4>十字架判定のための条件</h4>
+                <p style={{ marginBottom: '1rem', lineHeight: '1.8' }}>
+                  このシステムでは、カメラ映像からMediaPipeで検出した骨格点の位置をもとに、十字のポーズの見た目から<br />
+                  <span style={{ display: 'inline-block', marginLeft: '1rem', fontWeight: 'bold' }}>
+                    ・腰-肩-肘が垂直<br />
+                    ・肩-肘-手首が水平<br />
+                  </span><br />
+                  という特徴が考えられます。この特徴を用いて判定を行っています。
                 </p>
+                
+                <div className="tpose-explanation__logic-item">
+                  <h5 className="logic-item-title">1. 肩の角度（80〜100°）</h5>
+                  <p className="logic-item-desc">腕が前や下ではなく、真横に水平に上がっているかを判断するためです。</p>
+                </div>
+                
+                <div className="tpose-explanation__logic-item">
+                  <h5 className="logic-item-title">2. 肘の角度（150〜180°）</h5>
+                  <p className="logic-item-desc">腕が曲がっておらず、まっすぐ水平に伸びているかを判断するためです。</p>
+                </div>
+
+                <div className="tpose-explanation__logic-item">
+                  <h5 className="logic-item-title">3. 1秒間の維持</h5>
+                  <p className="logic-item-desc">腕を振り回した際などに、一瞬だけ十字の形になった誤反応を防ぎ、意図したポーズのみを検知するためです。</p>
+                </div>
+
               </div>
             </div>
 

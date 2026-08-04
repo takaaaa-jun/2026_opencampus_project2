@@ -887,3 +887,25 @@
     min-height: 240px;
   }
 }
+.tpose-explanation__logic-item {
+  background-color: #f8fafc;
+  border-left: 4px solid #3b82f6;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  border-radius: 0 4px 4px 0;
+}
+
+.logic-item-title {
+  color: #1e293b;
+  font-size: 0.95rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+  margin-top: 0;
+}
+
+.logic-item-desc {
+  color: #475569;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  margin: 0;
+}
