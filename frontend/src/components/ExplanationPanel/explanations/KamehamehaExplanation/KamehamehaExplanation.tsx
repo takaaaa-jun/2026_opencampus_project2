@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { ExplanationProps } from '../../types'
 import './KamehamehaExplanation.css'
 
@@ -528,6 +528,147 @@ function DistanceLabel({
   )
 }
 
+
+function ThresholdGraph({
+  title,
+  value,
+  threshold,
+  passed,
+  unit = '',
+  description,
+  reason,
+  successDirection = 'less',
+}: {
+  title: string
+  value: number | null
+  threshold: number
+  passed: boolean
+  unit?: string
+  description: string
+  reason: string
+  successDirection?: 'less' | 'greater'
+}) {
+  const maximum =
+    successDirection === 'less'
+      ? Math.max(threshold * 2, value ?? 0)
+      : Math.max(threshold, value ?? 0)
+
+  const valuePosition =
+    value === null || maximum <= 0
+      ? 0
+      : Math.min(
+          (value / maximum) * 100,
+          100,
+        )
+
+  const thresholdPosition =
+    maximum <= 0
+      ? 0
+      : Math.min(
+          (threshold / maximum) * 100,
+          100,
+        )
+
+  return (
+    <article
+      className={[
+        'kamehameha-explanation__algorithm-card',
+        passed ? 'is-passed' : '',
+      ]
+        .filter(Boolean)
+        .join(' ')}
+    >
+      <div className="kamehameha-explanation__algorithm-card-heading">
+        <h3>{title}</h3>
+
+        <span
+          className={[
+            'kamehameha-explanation__algorithm-result',
+            passed ? 'is-passed' : '',
+          ]
+            .filter(Boolean)
+            .join(' ')}
+        >
+          {value === null
+            ? '判定待ち'
+            : passed
+              ? '✓ 条件成立'
+              : '条件未成立'}
+        </span>
+      </div>
+
+      <p className="kamehameha-explanation__algorithm-description">
+        {description}
+      </p>
+
+      <div className="kamehameha-explanation__threshold-values">
+        <span>
+          現在値：
+          <strong>
+            {value === null
+              ? '---'
+              : value.toFixed(3)}
+            {unit}
+          </strong>
+        </span>
+
+        <span>
+          判定基準：
+          <strong>
+            {successDirection === 'less'
+              ? `${threshold.toFixed(3)}${unit}未満`
+              : `${threshold.toFixed(2)}${unit}以上`}
+          </strong>
+        </span>
+      </div>
+
+      <div
+        className="kamehameha-explanation__threshold-graph"
+        role="img"
+        aria-label={`${title}の現在値としきい値`}
+      >
+        <div
+          className={[
+            'kamehameha-explanation__threshold-value-bar',
+            passed ? 'is-passed' : '',
+          ]
+            .filter(Boolean)
+            .join(' ')}
+          style={{
+            width: `${valuePosition}%`,
+          }}
+        />
+
+        <div
+          className="kamehameha-explanation__threshold-marker"
+          style={{
+            left: `${thresholdPosition}%`,
+          }}
+        >
+          <span>しきい値</span>
+        </div>
+      </div>
+
+      <div className="kamehameha-explanation__threshold-scale">
+        <span>0</span>
+        <span>
+          {maximum.toFixed(
+            successDirection === 'less'
+              ? 3
+              : 2,
+          )}
+          {unit}
+        </span>
+      </div>
+
+      <div className="kamehameha-explanation__algorithm-reason">
+        <strong>なぜこの条件が必要か</strong>
+        <p>{reason}</p>
+      </div>
+    </article>
+  )
+}
+
 function ConditionStep({
   condition,
   passed,
@@ -690,6 +831,46 @@ export function KamehamehaExplanation({
     null,
   )
 
+  const [
+    isAlgorithmOpen,
+    setIsAlgorithmOpen,
+  ] = useState(true)
+
+  const visualizationRef =
+    useRef<HTMLDivElement | null>(null)
+
+  const [
+    isVisualizationFloating,
+    setIsVisualizationFloating,
+  ] = useState(false)
+
+  useEffect(() => {
+    const target =
+      visualizationRef.current
+
+    if (target === null) {
+      return
+    }
+
+    const observer =
+      new IntersectionObserver(
+        ([entry]) => {
+          setIsVisualizationFloating(
+            !entry.isIntersecting,
+          )
+        },
+        {
+          threshold: 0.15,
+        },
+      )
+
+    observer.observe(target)
+
+    return () => {
+      observer.disconnect()
+    }
+  }, [])
+
   const details =
     getKamehamehaDetails(
       detectionData,
@@ -842,7 +1023,10 @@ export function KamehamehaExplanation({
         </span>
       </div>
 
-      <div
+      <div className="kamehameha-explanation__comparison">
+        <div className="kamehameha-explanation__visual-column">
+          <div
+            ref={visualizationRef}
         className={[
           'kamehameha-explanation__visualization',
           allConditionsPassed
@@ -983,6 +1167,199 @@ export function KamehamehaExplanation({
             ✓ 3つの距離条件に成功
           </p>
         ) : null}
+      </div>
+
+        </div>
+
+        <div className="kamehameha-explanation__algorithm-column">
+          <section className="kamehameha-explanation__algorithm-accordion">
+        <button
+          type="button"
+          className="kamehameha-explanation__algorithm-toggle"
+          onClick={() =>
+            setIsAlgorithmOpen(
+              (current) => !current,
+            )
+          }
+          aria-expanded={isAlgorithmOpen}
+          aria-controls="kamehameha-algorithm-content"
+        >
+          <span>
+            <small>
+              判定に使われている計算や，
+              しきい値を使う理由を確認できます．
+            </small>
+
+            <strong>
+              判定アルゴリズムについて
+            </strong>
+          </span>
+
+          <span
+            className={[
+              'kamehameha-explanation__algorithm-toggle-icon',
+              isAlgorithmOpen
+                ? 'is-open'
+                : '',
+            ]
+              .filter(Boolean)
+              .join(' ')}
+            aria-hidden="true"
+          >
+            ▼
+          </span>
+        </button>
+
+        {isAlgorithmOpen ? (
+          <div
+            id="kamehameha-algorithm-content"
+            className="kamehameha-explanation__algorithm-collapse"
+          >
+            <section
+              className="kamehameha-explanation__algorithm"
+              aria-labelledby="kamehameha-algorithm-title"
+            >
+              <div className="kamehameha-explanation__algorithm-heading">
+                <p className="kamehameha-explanation__algorithm-kicker">
+                  判定アルゴリズム
+                </p>
+
+                <h2 id="kamehameha-algorithm-title">
+                  なぜこの条件でかめはめ波の構えが分かるのか
+                </h2>
+
+                <p>
+                  かめはめ波の構えでは，両手全体を身体の前で近づけ，
+                  手首と指先の横位置をそろえます．
+                  本システムでは，この姿勢の特徴を3つの距離として計算し，
+                  すべての値がしきい値を下回った場合に姿勢条件が成立したと判断します．
+                </p>
+              </div>
+
+              <div className="kamehameha-explanation__algorithm-flow">
+                <div>
+                  <span>1</span>
+                  <strong>両手を近づける</strong>
+                  <p>
+                    両手首座標間の2次元距離で，
+                    両手全体が近いことを確認します．
+                  </p>
+                </div>
+
+                <span aria-hidden="true">→</span>
+
+                <div>
+                  <span>2</span>
+                  <strong>手首を横方向にそろえる</strong>
+                  <p>
+                    両手首座標のx座標差で，
+                    両手が横にずれていないことを確認します．
+                  </p>
+                </div>
+
+                <span aria-hidden="true">→</span>
+
+                <div>
+                  <span>3</span>
+                  <strong>指先を横方向にそろえる</strong>
+                  <p>
+                    両中指先端座標のx座標差で，
+                    手の先端位置もそろっていることを確認します．
+                  </p>
+                </div>
+              </div>
+
+              <div className="kamehameha-explanation__algorithm-grid">
+                <ThresholdGraph
+                  title="両手首座標間の2次元距離"
+                  value={
+                    details?.wristDistance ??
+                    null
+                  }
+                  threshold={
+                    details?.wristDistanceThreshold ??
+                    0.05
+                  }
+                  passed={wristDistancePassed}
+                  description="両手首座標を直線で結んだときの2次元距離です．値が小さいほど，両手全体が近い位置にあります．"
+                  reason="かめはめ波の構えでは両手を一つのまとまりとして近づけるためです．この条件により，両手が離れた姿勢を除外できます．"
+                />
+
+                <ThresholdGraph
+                  title="両手首座標の横ずれ"
+                  value={
+                    details?.wristXDistance ??
+                    null
+                  }
+                  threshold={
+                    details?.wristXDistanceThreshold ??
+                    0.1
+                  }
+                  passed={wristXDistancePassed}
+                  description="左右の手首座標について，x座標の差だけを計算した値です．値が小さいほど，手首の横位置がそろっています．"
+                  reason="2次元距離だけでは，両手が斜めに近づいた姿勢も成立する可能性があります．横ずれを確認することで，大きく斜めにずれた姿勢を除外できます．"
+                />
+
+                <ThresholdGraph
+                  title="両中指先端座標の横ずれ"
+                  value={
+                    details?.middleFingerXDistance ??
+                    null
+                  }
+                  threshold={
+                    details?.middleFingerXDistanceThreshold ??
+                    0.1
+                  }
+                  passed={
+                    middleFingerXDistancePassed
+                  }
+                  description="左右の中指先端座標について，x座標の差を計算した値です．値が小さいほど，両手の先端位置が横方向にそろっています．"
+                  reason="手首だけが近くても，指先が別々の方向を向いている姿勢があります．中指先端の位置も確認することで，左右の手の先端がそろった構えを判定できます．"
+                />
+
+                <ThresholdGraph
+                  title="姿勢の維持時間"
+                  value={holdDuration}
+                  threshold={holdThreshold}
+                  passed={detected}
+                  unit="秒"
+                  successDirection="greater"
+                  description="3つの距離条件をすべて満たしている状態を維持した時間です．"
+                  reason="一瞬だけ手が重なった場合を，かめはめ波の構えとして誤判定しないためです．一定時間維持することで，意図して構えた動作と一時的な手の交差を区別できます．"
+                />
+              </div>
+
+              <div
+                className={[
+                  'kamehameha-explanation__algorithm-summary',
+                  allConditionsPassed
+                    ? 'is-passed'
+                    : '',
+                ]
+                  .filter(Boolean)
+                  .join(' ')}
+              >
+                <strong>姿勢条件のまとめ</strong>
+
+                <p>
+                  両手首間の距離，両手首の横ずれ，
+                  両中指先端の横ずれの3条件をすべて満たすと，
+                  かめはめ波らしい手の位置関係であると判断します．
+                </p>
+
+                <span>
+                  {allConditionsPassed
+                    ? '✓ 現在は3つの姿勢条件が成立しています'
+                    : '現在は成立していない条件があります'}
+                </span>
+              </div>
+            </section>
+          </div>
+        ) : null}
+      </section>
+
+
+        </div>
       </div>
 
       {selectedCondition !== null ? (
@@ -1158,6 +1535,169 @@ export function KamehamehaExplanation({
       >
         {resultText}
       </p>
+
+      {isVisualizationFloating ? (
+        <aside
+          className="kamehameha-explanation__floating-visualization"
+          aria-label="かめはめ波判定の手の可視化"
+        >
+          <div className="kamehameha-explanation__floating-heading">
+            <strong>
+              手の骨格と判定位置
+            </strong>
+
+            <span>
+              リアルタイム表示
+            </span>
+          </div>
+
+          <div
+            className={[
+              'kamehameha-explanation__visualization',
+              'is-floating',
+              allConditionsPassed
+                ? 'is-passed'
+                : '',
+            ]
+              .filter(Boolean)
+              .join(' ')}
+          >
+        {canVisualize ? (
+          <svg
+            viewBox="0 0 1 1"
+            preserveAspectRatio="xMidYMid meet"
+            role="img"
+            aria-label="両手の手首座標と中指先端座標の距離"
+          >
+            <HandSkeleton
+              landmarks={hands[0]}
+              wristPassed={
+                wristPointPassed
+              }
+              middleFingerPassed={
+                middleFingerXDistancePassed
+              }
+            />
+
+            <HandSkeleton
+              landmarks={hands[1]}
+              wristPassed={
+                wristPointPassed
+              }
+              middleFingerPassed={
+                middleFingerXDistancePassed
+              }
+            />
+
+            <line
+              x1={firstWrist.x}
+              y1={firstWrist.y}
+              x2={secondWrist.x}
+              y2={secondWrist.y}
+              className={[
+                'kamehameha-explanation__distance-line',
+                'wrist',
+                wristDistancePassed
+                  ? 'is-passed'
+                  : '',
+              ]
+                .filter(Boolean)
+                .join(' ')}
+            />
+
+            <line
+              x1={firstMiddleFinger.x}
+              y1={firstMiddleFinger.y}
+              x2={secondMiddleFinger.x}
+              y2={secondMiddleFinger.y}
+              className={[
+                'kamehameha-explanation__distance-line',
+                'finger',
+                middleFingerXDistancePassed
+                  ? 'is-passed'
+                  : '',
+              ]
+                .filter(Boolean)
+                .join(' ')}
+            />
+
+            {wristCenter !== null ? (
+              <>
+                <DistanceLabel
+                  x={wristCenter.x}
+                  y={
+                    wristCenter.y -
+                    0.06
+                  }
+                  title="両手首座標間の距離"
+                  value={
+                    details?.wristDistance ??
+                    null
+                  }
+                  passed={
+                    wristDistancePassed
+                  }
+                  kind="wrist"
+                />
+
+                <DistanceLabel
+                  x={wristCenter.x}
+                  y={
+                    wristCenter.y +
+                    0.06
+                  }
+                  title="両手首座標の横ずれ"
+                  value={
+                    details?.wristXDistance ??
+                    null
+                  }
+                  passed={
+                    wristXDistancePassed
+                  }
+                  kind="wrist"
+                />
+              </>
+            ) : null}
+
+            {middleFingerCenter !==
+            null ? (
+              <DistanceLabel
+                x={
+                  middleFingerCenter.x
+                }
+                y={
+                  middleFingerCenter.y -
+                  0.06
+                }
+                title="両中指先端座標の横ずれ"
+                value={
+                  details
+                    ?.middleFingerXDistance ??
+                  null
+                }
+                passed={
+                  middleFingerXDistancePassed
+                }
+                kind="finger"
+              />
+            ) : null}
+          </svg>
+        ) : (
+          <p className="kamehameha-explanation__waiting">
+            両手が映るようにカメラの前に立ってください
+          </p>
+        )}
+
+        {allConditionsPassed ? (
+          <p className="kamehameha-explanation__pose-success">
+            ✓ 3つの距離条件に成功
+          </p>
+        ) : null}
+
+          </div>
+        </aside>
+      ) : null}
+
     </section>
   )
 }
