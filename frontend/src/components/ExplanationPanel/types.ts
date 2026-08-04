@@ -16,6 +16,7 @@ export type ExplanationId =
 
 export type ExplanationProps = {
   detectionData: DetectionData | null
+  isCameraStarted: boolean
 }
 
 export type ExplanationItem = {
