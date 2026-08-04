@@ -172,6 +172,7 @@ function isSurpriseDetected(detectionData: ExplanationProps['detectionData']) {
 export function SurpriseExplanation({ detectionData }: ExplanationProps) {
   const [isSurpriseVisible, setIsSurpriseVisible] = useState(false)
   const [selectedCondition, setSelectedCondition] = useState<ConditionId | null>(null)
+  const [isOverviewOpen, setIsOverviewOpen] = useState(false)
   const canShowNextSurpriseRef = useRef(true)
   const surpriseTimerRef = useRef<number | null>(null)
 
@@ -380,7 +381,121 @@ export function SurpriseExplanation({ detectionData }: ExplanationProps) {
         </div>
       ) : null}
 
-      <h4 className="surprise-explanation__conditions-title">判定のアルゴリズム詳細（クリックしてプログラムを見てみてね）</h4>
+      <div className="surprise-explanation__section-header">
+        <h4 className="surprise-explanation__conditions-title">判定の条件</h4>
+        <button
+          type="button"
+          className="surprise-explanation__overview-toggle"
+          onClick={() => setIsOverviewOpen(true)}
+        >
+          判定のアルゴリズム全体像
+        </button>
+      </div>
+
+      {isOverviewOpen && (
+        <div
+          className="surprise-explanation__detail-overlay"
+          role="dialog"
+          aria-label="驚かしポーズ判定の全体像"
+          onClick={() => setIsOverviewOpen(false)}
+        >
+          <section
+            className="surprise-explanation__detail surprise-explanation__overview-modal"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="surprise-explanation__detail-heading">
+              <div>
+                <h2>💡 驚かす（Surprise）を判定する仕組みの全体像</h2>
+              </div>
+              <button type="button" onClick={() => setIsOverviewOpen(false)}>
+                閉じる
+              </button>
+            </div>
+
+            <div className="surprise-explanation__overview-layout">
+              {/* 左カラム: 判定ステップとまとめ */}
+              <div className="surprise-explanation__overview-main">
+                <p className="surprise-explanation__overview-text">
+                  驚かす動作は、<strong>「両手を斜め上・外側に大きく広げて、自分を大きく見せる『ワッ！』とする瞬間のポーズ」</strong>です。
+                </p>
+                <p className="surprise-explanation__overview-text">
+                  カメラ映像からAIが肩・肘・手首・腰などの特徴的な点を<strong>骨格（ランドマーク座標）</strong>として取得し、その位置関係（角度や距離）から判定しています。
+                </p>
+
+                <div className="surprise-explanation__overview-steps">
+                  <div className="surprise-explanation__overview-step">
+                    <span className="surprise-explanation__step-badge">1</span>
+                    <div className="surprise-explanation__step-content">
+                      <strong className="surprise-explanation__step-title">両肘を高く上げているか？</strong> (腰 - 肩 - 肘の角度)
+                      <p className="surprise-explanation__step-desc">普段の立ち姿勢や、手が下がっている状態を「驚かす」と誤検知するのを防ぎます。</p>
+                    </div>
+                  </div>
+                  <div className="surprise-explanation__overview-step">
+                    <span className="surprise-explanation__step-badge">2</span>
+                    <div className="surprise-explanation__step-content">
+                      <strong className="surprise-explanation__step-title">腕を縮こませずに広げているか？</strong> (手首 - 肘 - 肩の角度)
+                      <p className="surprise-explanation__step-desc">胸の前で腕を縮こませた、別のアクション（アッパーなど）を排除します。</p>
+                    </div>
+                  </div>
+                  <div className="surprise-explanation__overview-step">
+                    <span className="surprise-explanation__step-badge">3</span>
+                    <div className="surprise-explanation__step-content">
+                      <strong className="surprise-explanation__step-title">手は肩幅より外側に開いているか？</strong> (左右の手首の距離 ＞ 肩幅)
+                      <p className="surprise-explanation__step-desc">単に真上に手を挙げた「挙手」や「万歳」と区別します。</p>
+                    </div>
+                  </div>
+                </div>
+
+                <p className="surprise-explanation__overview-summary">
+                  もし「腕を上げる」だけならアッパーと区別がつかず、「横に広げる」だけならTポーズと区別がつきません。
+                  <strong>これら3つの判定基準を組み合わせることで、初めて「驚かすポーズ」だけを正確に見分けることができる</strong>ようになります。
+                </p>
+              </div>
+
+              {/* 右カラム: 数学コラム */}
+              <aside className="surprise-explanation__overview-aside">
+                <div className="surprise-explanation__math-card">
+                  <h4 className="surprise-explanation__math-title">📐 角度の計算方法（高校数学の応用）</h4>
+                  <p className="surprise-explanation__math-intro">
+                    「腰 - 肩 - 肘」や「手首 - 肘 - 肩」などの関節がなす角度を測るために、プログラムの裏側では高校の数学で学習する<strong>「ベクトルの内積」</strong>を利用しています。
+                  </p>
+                  
+                  <div className="surprise-explanation__math-step">
+                    <h5>① ベクトルの作成</h5>
+                    <p>
+                      3つの関節（例えば、肘・肩・腰）の座標から、肩を始点とした2本のベクトル <strong>a</strong>（肩→肘）と <strong>b</strong>（肩→腰）を作ります。
+                    </p>
+                  </div>
+
+                  <div className="surprise-explanation__math-step">
+                    <h5>② 内積の公式から cosθ を算出</h5>
+                    <p>
+                      2つのベクトルの長さと成分から、次の公式を使って角度のコサイン（cosθ）を求めます。
+                    </p>
+                    <div className="surprise-explanation__math-formula">
+                      <code>cosθ = (a · b) / (|a| × |b|)</code>
+                    </div>
+                  </div>
+
+                  <div className="surprise-explanation__math-step">
+                    <h5>③ アークコサインで角度 θ へ変換</h5>
+                    <p>
+                      得られた cosθ の値から、逆三角関数のアークコサイン（arccos）を用いて、最終的な角度 θ を度数法（°）に変換します。
+                    </p>
+                    <div className="surprise-explanation__math-formula">
+                      <code>θ = arccos(cosθ)</code>
+                    </div>
+                  </div>
+                  
+                  <p className="surprise-explanation__math-footer">
+                    カメラから送られてくる点座標（X, Y）の変化に対して、この計算を一秒間に何十回も繰り返すことで、リアルタイムで関節の角度を測ることができるのです。
+                  </p>
+                </div>
+              </aside>
+            </div>
+          </section>
+        </div>
+      )}
 
       <ol className="surprise-explanation__conditions">
         <ConditionStep
