@@ -405,8 +405,8 @@ svg circle.surprise-explanation__wrist-point:nth-of-type(even) {
 
 /* 全体像解説ポップアップ内のスタイル調整 */
 .surprise-explanation__overview-modal {
-  width: min(95%, 1200px) !important; /* 横幅を1200pxに拡大 */
-  max-width: 1200px;
+  width: min(98%, 1500px) !important; /* 横幅を最大1500pxに拡大 */
+  max-width: 1500px;
   padding: 24px 40px; /* 上下余白を24px、左右を40pxにタイト化 */
   gap: 16px;
   
@@ -587,8 +587,42 @@ svg circle.surprise-explanation__wrist-point:nth-of-type(even) {
   font-style: italic;
 }
 
+/* 条件詳細ポップアップの2カラム化 (横幅拡張) */
+.surprise-explanation__detail--wide {
+  width: min(98%, 1500px) !important; /* 横幅を最大1500pxに拡大 */
+  max-width: 1500px;
+  padding: 32px 48px; /* パディングを少し縮めて高さを抑える */
+}
+
+.surprise-explanation__detail-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr; /* 左右比率を半々にする */
+  gap: 32px;
+  align-items: start;
+}
+
+.surprise-explanation__sub-section-title {
+  margin: 0 0 12px 0;
+  color: #0f172a;
+  font-size: 1.25rem;
+  font-weight: 800;
+  border-bottom: 2px solid #e2e8f0;
+  padding-bottom: 8px;
+}
+
+.surprise-explanation__detail-main,
+.surprise-explanation__detail-aside {
+  display: grid;
+  gap: 16px;
+}
+
 /* レスポンシブ用：幅が狭いデバイスでは1カラムにフォールバック */
 @media (max-width: 900px) {
+  .surprise-explanation__detail-layout {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+  
   .surprise-explanation__overview-layout {
     grid-template-columns: 1fr;
     gap: 24px;

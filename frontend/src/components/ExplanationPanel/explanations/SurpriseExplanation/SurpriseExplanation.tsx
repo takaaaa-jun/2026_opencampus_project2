@@ -147,17 +147,70 @@ function highlightCode(code: string) {
 
 function ConditionDetailPanel({ condition, onClose }: { condition: ConditionId; onClose: () => void }) {
   const detail = CONDITION_DETAILS[condition]
+  const isAngleCondition = condition === 'hip_shoulder_elbow' || condition === 'wrist_elbow_shoulder'
+
+  const angleCode = `def angle(first, vertex, third):
+    # 3つの関節座標(X, Y)から2本のベクトルを作成
+    v1 = (first.x - vertex.x, first.y - vertex.y)
+    v2 = (third.x - vertex.x, third.y - vertex.y)
+    
+    # ベクトルの長さを計算(三平方の定理)
+    len1 = math.hypot(*v1)
+    len2 = math.hypot(*v2)
+    if len1 == 0 or len2 == 0:
+        return 0.0
+    
+    # 内積の公式からcosθを求める
+    cosine = (v1[0]*v2[0] + v1[1]*v2[1]) / (len1 * len2)
+    
+    # アークコサインでラジアンから角度(度)に変換
+    theta = math.acos(max(-1.0, min(1.0, cosine)))
+    return math.degrees(theta)`
 
   return (
-    <section className="surprise-explanation__detail" aria-label={`${detail.title}の詳細`} onClick={(event) => event.stopPropagation()}>
+    <section
+      className={`surprise-explanation__detail ${isAngleCondition ? 'surprise-explanation__detail--wide' : ''}`}
+      aria-label={`${detail.title}の詳細`}
+      onClick={(event) => event.stopPropagation()}
+    >
       <div className="surprise-explanation__detail-heading">
         <div>
           <h2>{detail.title}</h2>
         </div>
         <button type="button" onClick={onClose}>閉じる</button>
       </div>
-      <p className="surprise-explanation__detail-summary">{detail.summary}</p>
-      <pre className="surprise-explanation__code-example"><code>{highlightCode(detail.code)}</code></pre>
+
+      {isAngleCondition ? (
+        <div className="surprise-explanation__detail-layout">
+          {/* 左側: 元の説明と判定コード */}
+          <div className="surprise-explanation__detail-main">
+            <h3 className="surprise-explanation__sub-section-title">ポーズの判定条件</h3>
+            <p className="surprise-explanation__detail-summary">{detail.summary}</p>
+            <pre className="surprise-explanation__code-example">
+              <code>{highlightCode(detail.code)}</code>
+            </pre>
+          </div>
+
+          {/* 右側: angle関数の定義と解説 */}
+          <div className="surprise-explanation__detail-aside">
+            <h3 className="surprise-explanation__sub-section-title">📐 角度計算関数 (angle)</h3>
+            <p className="surprise-explanation__detail-summary">
+              3つの関節の座標を受け取り、真ん中の関節（<code>vertex</code>）を中心とした角度（0〜180度）を計算する共通の関数です。
+              右側の全体像で解説した<strong>ベクトルの内積</strong>がこの中でそのまま使われています。
+            </p>
+            <pre className="surprise-explanation__code-example">
+              <code>{highlightCode(angleCode)}</code>
+            </pre>
+          </div>
+        </div>
+      ) : (
+        <div className="surprise-explanation__detail-single">
+          <p className="surprise-explanation__detail-summary">{detail.summary}</p>
+          <pre className="surprise-explanation__code-example">
+            <code>{highlightCode(detail.code)}</code>
+          </pre>
+        </div>
+      )}
     </section>
   )
 }
