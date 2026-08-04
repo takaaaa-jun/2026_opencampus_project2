@@ -1,5 +1,4 @@
-import type { ReactNode } from 'react'
-
+import { useState, type ReactNode } from 'react'
 import type { ExplanationProps } from '../../types'
 
 import './UpperExplanation.css'
@@ -76,6 +75,14 @@ type ReferenceLine = {
   className: string
 }
 
+type ConditionId = 'rise' | 'start' | 'reach' | 'between'
+
+type ConditionDetail = {
+  title: string
+  summary: ReactNode
+  code: string
+}
+
 function readNumeric(value: unknown): number | undefined {
   return typeof value === 'number' && Number.isFinite(value) ? value : undefined
 }
@@ -121,6 +128,59 @@ function clamp(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max)
 }
 
+const CONDITION_DETAILS: Record<ConditionId, ConditionDetail> = {
+  rise: {
+    title: '十分上昇しているか',
+    summary: (
+      <>
+        ここでいう<strong>開始平均</strong>は、手首の履歴の<strong>最初の3フレーム</strong>の平均、
+        <strong>終了平均</strong>は<strong>最後の3フレーム</strong>の平均です。
+        1フレームだけの上下ではなく、動き出しと動き終わりの代表値を比べて、手が本当に上へ動いたかを見ています。
+      </>
+    ),
+    code: `# 履歴の先頭3フレームと末尾3フレームの平均値を比較
+start_avg = average(history[:3])
+end_avg = average(history[-3:])
+
+# 手が上に動くほど y は小さくなるので、差分が大きいほど上昇
+dy = start_avg - end_avg
+rises_enough = dy >= rise_threshold`,
+  },
+  start: {
+    title: '肩より下から始まるか',
+    summary: (
+      <>
+        動作の開始時点で、手が<strong>肩より下</strong>にあるかを確認します。
+        すでに手が高い位置にある場合は、アッパーではない別の動作と区別しやすくなります。
+      </>
+    ),
+    code: `# 開始位置が肩より下かを確認
+starts_below_shoulder = start_avg > shoulder_y`,
+  },
+  reach: {
+    title: '肩の高さまで到達するか',
+    summary: (
+      <>
+        終了時点で、手が<strong>肩の高さまで近づいているか / 超えているか</strong>を確認します。
+        これにより、途中までしか上がっていない動作を除外します。
+      </>
+    ),
+    code: `# 終了位置が肩の高さまで届いているかを確認
+ends_near_or_above_shoulder = end_avg <= shoulder_y + shoulder_reach_margin`,
+  },
+  between: {
+    title: '肩の間を通るか',
+    summary: (
+      <>
+        手が<strong>左右の肩の間</strong>を通っているかを確認します。
+        体の正面で上がっているかを見るための条件で、横に流れた動作を除外するのに使います。
+      </>
+    ),
+    code: `# 左右の肩の間を通るかを確認
+between_shoulders = left_shoulder_x <= hand_x <= right_shoulder_x`,
+  },
+}
+
 function MiniChart({
   series,
   references,
@@ -140,7 +200,8 @@ function MiniChart({
   const range = Math.max(axisHeight, 0.0001)
 
   const yFor = (value: number): number => padY + (clamp(value, 0, axisHeight) / range) * chartHeight
-  const xFor = (index: number, count: number): number => padX + (count <= 1 ? chartWidth / 2 : (chartWidth * index) / (count - 1))
+  const xFor = (index: number, count: number): number =>
+    padX + (count <= 1 ? chartWidth / 2 : (chartWidth * index) / (count - 1))
   const ticks = [0, 0.25, 0.5, 0.75, 1]
 
   return (
@@ -235,30 +296,70 @@ function ConditionCard({
   title,
   status,
   children,
+  onSelect,
 }: {
   title: string
   status: string
   children: ReactNode
+  onSelect: () => void
 }) {
   const isOk = status === 'OK'
+
   return (
-    <div className={`upper-condition ${isOk ? 'is-ok' : 'is-ng'}`}>
+    <article className={`upper-condition ${isOk ? 'is-ok' : 'is-ng'}`}>
       <div className="upper-condition__head">
         <div className="upper-condition__title">{title}</div>
         <div className={`upper-miniPill ${isOk ? 'is-ok' : 'is-ng'}`}>{status}</div>
       </div>
       <div className="upper-condition__body">{children}</div>
-    </div>
+      <button type="button" className="upper-condition__more" onClick={onSelect}>
+        詳しく見る
+      </button>
+    </article>
   )
+}
+
+function pickHand(details: UpperDetails | undefined, side: 'left' | 'right'): HandDetail | undefined {
+  if (!details) return undefined
+  return side === 'left' ? details.left ?? details.leftHand : details.right ?? details.rightHand
 }
 
 function formatHeadlineValue(value: number | undefined, digits = 1, frameHeight?: number): string {
   return formatValue(value, digits, frameHeight ? 'px' : '')
 }
 
-function pickHand(details: UpperDetails | undefined, side: 'left' | 'right'): HandDetail | undefined {
-  if (!details) return undefined
-  return side === 'left' ? details.left ?? details.leftHand : details.right ?? details.rightHand
+function ConditionDetailPanel({
+  condition,
+  onClose,
+}: {
+  condition: ConditionId
+  onClose: () => void
+}) {
+  const detail = CONDITION_DETAILS[condition]
+
+  return (
+    <section
+      className="upper-detail"
+      aria-label={`${detail.title}の詳細`}
+      onClick={(event) => event.stopPropagation()}
+    >
+      <div className="upper-detail__heading">
+        <div>
+          <h2>{detail.title}</h2>
+        </div>
+        <button type="button" onClick={onClose}>
+          閉じる
+        </button>
+      </div>
+
+      <div className="upper-detail__single">
+        <p className="upper-detail__summary">{detail.summary}</p>
+        <pre className="upper-code-example">
+          <code>{detail.code}</code>
+        </pre>
+      </div>
+    </section>
+  )
 }
 
 export function UpperExplanation({ detectionData }: ExplanationProps) {
@@ -272,17 +373,19 @@ export function UpperExplanation({ detectionData }: ExplanationProps) {
   const leftHistory = resolveHistory(left)
   const rightHistory = resolveHistory(right)
 
-  const leftResult = details?.leftRisesEnough ?? left?.risesEnough ?? left?.passedDy
-  const rightResult = details?.rightRisesEnough ?? right?.risesEnough ?? right?.passedDy
+  const leftRisesEnough = details?.leftRisesEnough ?? left?.risesEnough ?? left?.passedDy
+  const rightRisesEnough = details?.rightRisesEnough ?? right?.risesEnough ?? right?.passedDy
 
-  const leftStartBelow = details?.leftStartsBelowShoulder ?? left?.startsBelowShoulder
-  const rightStartBelow = details?.rightStartsBelowShoulder ?? right?.startsBelowShoulder
+  const leftStartsBelowShoulder = details?.leftStartsBelowShoulder ?? left?.startsBelowShoulder
+  const rightStartsBelowShoulder = details?.rightStartsBelowShoulder ?? right?.startsBelowShoulder
 
-  const leftEndOk = details?.leftEndsNearOrAboveShoulder ?? left?.endsNearOrAboveShoulder ?? left?.aboveShoulder
-  const rightEndOk = details?.rightEndsNearOrAboveShoulder ?? right?.endsNearOrAboveShoulder ?? right?.aboveShoulder
+  const leftEndsNearOrAboveShoulder =
+    details?.leftEndsNearOrAboveShoulder ?? left?.endsNearOrAboveShoulder ?? left?.aboveShoulder
+  const rightEndsNearOrAboveShoulder =
+    details?.rightEndsNearOrAboveShoulder ?? right?.endsNearOrAboveShoulder ?? right?.aboveShoulder
 
-  const leftBetween = details?.leftBetweenShoulders ?? left?.betweenShoulders
-  const rightBetween = details?.rightBetweenShoulders ?? right?.betweenShoulders
+  const leftBetweenShoulders = details?.leftBetweenShoulders ?? left?.betweenShoulders
+  const rightBetweenShoulders = details?.rightBetweenShoulders ?? right?.betweenShoulders
 
   const overallOk = details?.result ?? details?.isOk ?? details?.ok ?? false
 
@@ -291,66 +394,105 @@ export function UpperExplanation({ detectionData }: ExplanationProps) {
     ...(right?.shoulderY !== undefined ? [{ label: '右肩', value: right.shoulderY, className: 'is-rightShoulder' }] : []),
   ]
 
-  return (
-    <section className="upperPanel">
-      <p className="crossarms-intro">
-        アッパーは体の正面で手を振り上げる動作です。肩の高さより下から上へ手首が移動し、左右の肩の間を通っているかを判定することで、体の正面で行われているかを確認しています。手首の上昇判定の閾値は肩幅の0.5倍の距離を採用しています。
-      </p>
-      <header className="upperIntro">
-        <div className={`crossarms-hero ${overallOk ? 'crossarms-hero--ok' : 'crossarms-hero--ng'}`}>
-          <div className="crossarms-hero__icon">{overallOk ? '✓' : '!'}</div>
-          <div className="crossarms-hero__content">
-            <h3>判定：{overallOk ? 'OK' : 'NG'}</h3>
-          </div>
-        </div>
-      </header>
+  const [selectedCondition, setSelectedCondition] = useState<ConditionId | null>(null)
+  const [isOverviewOpen, setIsOverviewOpen] = useState(false)
 
-      <div className="upperConditions" style={{ gridTemplateColumns: 'repeat(4, minmax(0, 1fr))' }}>
-        <ConditionCard title="条件1：十分上昇している" status={formatBool((leftResult === true) || (rightResult === true))}>
-          <div className="upperConditionItem__name">開始 → 終了 の差分</div>
+  if (!details) {
+    return (
+      <section className="upperPanel">
+        <div className="upper-emptyState">
+          <h3>アッパーの説明</h3>
+          <p>バックエンドから判定データが届くと、ここにアルゴリズムの説明を表示します。</p>
+        </div>
+      </section>
+    )
+  }
+
+  return (
+    <section className="upperPanel" aria-label="アッパーの判定過程">
+      <p className="crossarms-intro">
+        アッパーは体の正面で手を振り上げる動作です。肩の高さより下から上へ手が移動し、左右の肩の間を通っているかを判定することで、体の正面で行われているかを確認しています。腕を振り上げる閾値は肩幅の0.5倍の距離を採用しています。
+      </p>
+
+      <div className={`crossarms-hero ${overallOk ? 'crossarms-hero--ok' : 'crossarms-hero--ng'}`}>
+        <div className="crossarms-hero__icon">{overallOk ? '✓' : '!'}</div>
+        <div className="crossarms-hero__content">
+          <h3>判定：{overallOk ? 'OK' : 'NG'}</h3>
+          <p>
+            まずは履歴の最初3フレームと最後3フレームを比べて、手が本当に上へ動いたかを見ます。
+            そのうえで、肩より下から始まり、肩の高さまで上がり、肩の間を通るかを確認します。
+          </p>
+        </div>
+      </div>
+
+      <div className="upperConditions">
+        <ConditionCard
+          title="条件1：十分上昇している"
+          status={formatBool((leftRisesEnough === true) || (rightRisesEnough === true))}
+          onSelect={() => setSelectedCondition('rise')}
+        >
+          <div className="upperConditionItem__name">開始平均と終了平均の差分</div>
           <div className="upperConditionItem__value">
+            開始平均は履歴の<strong>最初の3フレーム</strong>、終了平均は<strong>最後の3フレーム</strong>です。
+            <br />
             左 {formatHeadlineValue(left?.startAvg, 1, frameHeight)} → {formatHeadlineValue(left?.endAvg, 1, frameHeight)}
             <br />
             右 {formatHeadlineValue(right?.startAvg, 1, frameHeight)} → {formatHeadlineValue(right?.endAvg, 1, frameHeight)}
           </div>
-          <div className={`upperConditionItem__flag ${(leftResult === true) || (rightResult === true) ? 'is-ok' : 'is-ng'}`}>
-            {formatBool((leftResult === true) || (rightResult === true))}
+          <div className={`upperConditionItem__flag ${(leftRisesEnough === true) || (rightRisesEnough === true) ? 'is-ok' : 'is-ng'}`}>
+            {formatBool((leftRisesEnough === true) || (rightRisesEnough === true))}
           </div>
         </ConditionCard>
 
-        <ConditionCard title="条件2：肩より下で始まる" status={formatBool((leftStartBelow === true) || (rightStartBelow === true))}>
+        <ConditionCard
+          title="条件2：肩より下から始まる"
+          status={formatBool((leftStartsBelowShoulder === true) || (rightStartsBelowShoulder === true))}
+          onSelect={() => setSelectedCondition('start')}
+        >
           <div className="upperConditionItem__name">開始位置と肩の高さ</div>
           <div className="upperConditionItem__value">
+            動作の最初に、手首が肩より下にあるかを見ます。
+            <br />
             左 {formatHeadlineValue(left?.startAvg, 1, frameHeight)} / 肩 {formatHeadlineValue(left?.shoulderY, 1, frameHeight)}
             <br />
             右 {formatHeadlineValue(right?.startAvg, 1, frameHeight)} / 肩 {formatHeadlineValue(right?.shoulderY, 1, frameHeight)}
           </div>
-          <div className={`upperConditionItem__flag ${(leftStartBelow === true) || (rightStartBelow === true) ? 'is-ok' : 'is-ng'}`}>
-            {formatBool((leftStartBelow === true) || (rightStartBelow === true))}
+          <div className={`upperConditionItem__flag ${(leftStartsBelowShoulder === true) || (rightStartsBelowShoulder === true) ? 'is-ok' : 'is-ng'}`}>
+            {formatBool((leftStartsBelowShoulder === true) || (rightStartsBelowShoulder === true))}
           </div>
         </ConditionCard>
 
-        <ConditionCard title="条件3：肩の高さまで到達" status={formatBool((leftEndOk === true) || (rightEndOk === true))}>
+        <ConditionCard
+          title="条件3：肩の高さまで到達"
+          status={formatBool((leftEndsNearOrAboveShoulder === true) || (rightEndsNearOrAboveShoulder === true))}
+          onSelect={() => setSelectedCondition('reach')}
+        >
           <div className="upperConditionItem__name">終了位置が肩の高さ以上</div>
           <div className="upperConditionItem__value">
+            終了平均は履歴の<strong>最後の3フレーム</strong>です。
+            <br />
             左 {formatHeadlineValue(left?.endAvg, 1, frameHeight)} / 肩 {formatHeadlineValue(left?.shoulderY, 1, frameHeight)}
             <br />
             右 {formatHeadlineValue(right?.endAvg, 1, frameHeight)} / 肩 {formatHeadlineValue(right?.shoulderY, 1, frameHeight)}
           </div>
-          <div className={`upperConditionItem__flag ${(leftEndOk === true) || (rightEndOk === true) ? 'is-ok' : 'is-ng'}`}>
-            {formatBool((leftEndOk === true) || (rightEndOk === true))}
+          <div className={`upperConditionItem__flag ${(leftEndsNearOrAboveShoulder === true) || (rightEndsNearOrAboveShoulder === true) ? 'is-ok' : 'is-ng'}`}>
+            {formatBool((leftEndsNearOrAboveShoulder === true) || (rightEndsNearOrAboveShoulder === true))}
           </div>
         </ConditionCard>
 
-        <ConditionCard title="条件4：肩の間を通る" status={formatBool((leftBetween === true) || (rightBetween === true))}>
+        <ConditionCard
+          title="条件4：肩の間を通る"
+          status={formatBool((leftBetweenShoulders === true) || (rightBetweenShoulders === true))}
+          onSelect={() => setSelectedCondition('between')}
+        >
           <div className="upperConditionItem__name">肩の間の通過判定</div>
           <div className="upperConditionItem__value">
-            左 {formatBool(leftBetween)} / 右 {formatBool(rightBetween)}
+            左 {formatBool(leftBetweenShoulders)} / 右 {formatBool(rightBetweenShoulders)}
             <br />
-            肩幅 {formatHeadlineValue(details?.shoulderWidth, 1, frameHeight)}
+            肩幅 {formatHeadlineValue(details.shoulderWidth, 1, frameHeight)}
           </div>
-          <div className={`upperConditionItem__flag ${(leftBetween === true) || (rightBetween === true) ? 'is-ok' : 'is-ng'}`}>
-            {formatBool((leftBetween === true) || (rightBetween === true))}
+          <div className={`upperConditionItem__flag ${(leftBetweenShoulders === true) || (rightBetweenShoulders === true) ? 'is-ok' : 'is-ng'}`}>
+            {formatBool((leftBetweenShoulders === true) || (rightBetweenShoulders === true))}
           </div>
         </ConditionCard>
       </div>
@@ -363,6 +505,146 @@ export function UpperExplanation({ detectionData }: ExplanationProps) {
           { label: '右手', values: rightHistory, className: 'is-right' },
         ]}
       />
+
+      <div className="upper-section-header">
+        <h4 className="upper-conditions-title">判定の条件</h4>
+        <button
+          type="button"
+          className="upper-overview-toggle"
+          onClick={() => setIsOverviewOpen(true)}
+        >
+          判定のアルゴリズム全体像
+        </button>
+      </div>
+
+      {isOverviewOpen && (
+        <div
+          className="upper-detail-overlay"
+          role="dialog"
+          aria-label="アッパー判定の全体像"
+          onClick={() => setIsOverviewOpen(false)}
+        >
+          <section
+            className="upper-detail upper-overview-modal"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="upper-detail__heading">
+              <div>
+                <h2>💡 アッパーを判定する仕組みの全体像</h2>
+              </div>
+              <button type="button" onClick={() => setIsOverviewOpen(false)}>
+                閉じる
+              </button>
+            </div>
+
+            <div className="upper-overview-layout">
+              <div className="upper-overview-main">
+                <p className="upper-overview-text">
+                  アッパーは、<strong>体の正面で手を下から上へ振り上げる動作</strong>です。単に手が上がるだけではなく、
+                  <strong>開始位置・上昇量・到達位置・通過位置</strong>を順番に確認して判定します。
+                </p>
+                <p className="upper-overview-text">
+                  ここでいう<strong>開始平均</strong>は履歴の最初の3フレーム、<strong>終了平均</strong>は最後の3フレームの平均です。
+                  1フレームだけだとブレやすいので、数フレームをまとめて平均し、動き出しと動き終わりの代表値を作っています。
+                </p>
+                <p className="upper-overview-text">
+                  つまり、開始平均は「振り上げる前の高さの代表」、終了平均は「振り上げ終わったあとの高さの代表」です。
+                  この2つを比べて、手が本当に上へ動いたかを見ます。
+                </p>
+
+                <div className="upper-overview-steps">
+                  <div className="upper-overview-step">
+                    <span className="upper-step-badge">1</span>
+                    <div className="upper-step-content">
+                      <strong className="upper-step-title">十分に上がっているか</strong>
+                      <p className="upper-step-desc">
+                        開始平均との差と終了平均との差を比べ、しきい値以上の上昇があるかを見ます。
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="upper-overview-step">
+                    <span className="upper-step-badge">2</span>
+                    <div className="upper-step-content">
+                      <strong className="upper-step-title">最初は肩より下か</strong>
+                      <p className="upper-step-desc">
+                        すでに高い位置から始まっていると、アッパーではない別動作の可能性があります。
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="upper-overview-step">
+                    <span className="upper-step-badge">3</span>
+                    <div className="upper-step-content">
+                      <strong className="upper-step-title">肩の高さまで届くか</strong>
+                      <p className="upper-step-desc">
+                        終了時に肩の高さに届いているかを見て、途中で止まった動作を除外します。
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="upper-overview-step">
+                    <span className="upper-step-badge">4</span>
+                    <div className="upper-step-content">
+                      <strong className="upper-step-title">肩の間を通るか</strong>
+                      <p className="upper-step-desc">
+                        体の横に流れた動作ではなく、正面を通る上昇になっているかを確認します。
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <p className="upper-overview-summary">
+                  ひとつの条件だけでは誤検知しやすいため、<strong>4つの条件を組み合わせてアッパーを判定</strong>しています。
+                  この組み合わせにより、ただ手を上げただけの姿勢と、前に出て振り上げた動作を区別しやすくしています。
+                </p>
+              </div>
+
+              <aside className="upper-overview-aside">
+                <div className="upper-math-card">
+                  <h4 className="upper-math-title">📐 判定の考え方</h4>
+                  <p className="upper-math-intro">
+                    アッパーの判定は、手の高さの変化を数値で見るシンプルなルールです。特に、<strong>開始平均</strong> と <strong>終了平均</strong> の差が重要です。
+                  </p>
+
+                  <div className="upper-math-step">
+                    <h5>① 履歴の平均を取る</h5>
+                    <p>直近のフレームの高さをまとめて、開始側と終了側の平均値を出します。</p>
+                  </div>
+
+                  <div className="upper-math-step">
+                    <h5>② 上昇量を比較する</h5>
+                    <p>開始平均との差がしきい値を超えていれば、「十分に上がった」とみなします。</p>
+                    <div className="upper-math-formula">
+                      <code>dy = start_avg - end_avg</code>
+                    </div>
+                  </div>
+
+                  <div className="upper-math-step">
+                    <h5>③ 肩の基準と比べる</h5>
+                    <p>肩より下から始まり、肩の高さまで届き、さらに肩の間を通るかを順番に確認します。</p>
+                  </div>
+
+                  <p className="upper-math-footer">
+                    この流れをフレームごとに繰り返すことで、リアルタイムにアッパー動作を見分けています。
+                  </p>
+                </div>
+              </aside>
+            </div>
+          </section>
+        </div>
+      )}
+
+      {selectedCondition !== null ? (
+        <div
+          className="upper-detail-overlay"
+          role="dialog"
+          aria-label="アッパー判定の詳細"
+          onClick={() => setSelectedCondition(null)}
+        >
+          <ConditionDetailPanel condition={selectedCondition} onClose={() => setSelectedCondition(null)} />
+        </div>
+      ) : null}
     </section>
   )
 }
