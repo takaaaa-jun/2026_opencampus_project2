@@ -446,7 +446,6 @@ function ConditionStep({
             <strong>{title}</strong>
             {subtitle && <p className="tpose-explanation__step-info" style={{ margin: '4px 0 0 0' }}>{subtitle}</p>}
           </div>
-          <span className="tpose-explanation__condition-action" aria-hidden="true">実際のコードを見る</span>
         </div>
         {children ? <div className="tpose-explanation__step-content">{children}</div> : null}
       </button>
@@ -491,8 +490,10 @@ function ConditionDetailPanel({ condition, onClose }: { condition: ConditionId; 
 
 // --- メインコンポーネント ---
 export function TPoseExplanation({ detectionData }: ExplanationProps) {
+  const [activeTab, setActiveTab] = useState<'practice' | 'algorithm'>('algorithm')
   const [isTPoseVisible, setIsTPoseVisible] = useState(false)
   const [selectedCondition, setSelectedCondition] = useState<ConditionId | null>(null)
+  const [isCodeModalOpen, setIsCodeModalOpen] = useState(false)
   const canShowNextRef = useRef(true)
   const timerRef = useRef<number | null>(null)
 
@@ -533,89 +534,245 @@ export function TPoseExplanation({ detectionData }: ExplanationProps) {
 
   return (
     <section className="tpose-explanation" aria-label="十字架動作の判定過程">
-      <p className="tpose-explanation__lead">
-        両腕を横に伸ばし（肩角度80°〜100°、肘角度150°〜180°）、その姿勢を1秒間キープすることで判定します
-      </p>
+      <div className="tpose-explanation__tabs">
+        <button
+          type="button"
+          className={`tpose-explanation__tab ${activeTab === 'practice' ? 'is-active' : ''}`}
+          onClick={() => setActiveTab('practice')}
+        >
+          練習
+        </button>
+        <button
+          type="button"
+          className={`tpose-explanation__tab ${activeTab === 'algorithm' ? 'is-active' : ''}`}
+          onClick={() => setActiveTab('algorithm')}
+        >
+          十字架判定のしくみ
+        </button>
+      </div>
 
-      <div className="tpose-explanation__body">
-        {/* 左: ピクトグラム */}
-        <div className="tpose-explanation__figure-wrap">
-          <PictogramFigure details={details} landmarks={_landmarks} selectedCondition={selectedCondition} />
-        </div>
+      {activeTab === 'practice' && (
+        <>
+          <p className="tpose-explanation__lead">
+            両腕を横に伸ばし（肩角度80°〜100°、肘角度150°〜180°）、その姿勢を1秒間キープすることで判定します
+          </p>
 
-        {/* 右: 条件ステップ */}
-        <div className="tpose-explanation__panel">
-          <ol className="tpose-explanation__conditions">
-            <ConditionStep
-              condition="shoulder"
-              passed={isShouldersOk}
-              title="両肩の角度（80°〜100°）"
-              subtitle="肘・肩・腰の三点で計算しています"
-              selected={selectedCondition === 'shoulder'}
-              onSelect={(c) => setSelectedCondition((curr) => (curr === c ? null : c))}
-            >
-              {details && (
-                <div className="tpose-explanation__gauges">
-                  <div className="tpose-explanation__gauge-wrap">
-                    <span className="tpose-explanation__gauge-label">左: {details.left_shoulder_angle}°</span>
-                    <AngleGaugeBar currentAngle={details.left_shoulder_angle} minOk={80} maxOk={100} passed={details.is_left_shoulder_ok} />
-                  </div>
-                  <div className="tpose-explanation__gauge-wrap">
-                    <span className="tpose-explanation__gauge-label">右: {details.right_shoulder_angle}°</span>
-                    <AngleGaugeBar currentAngle={details.right_shoulder_angle} minOk={80} maxOk={100} passed={details.is_right_shoulder_ok} />
-                  </div>
-                </div>
-              )}
-            </ConditionStep>
+          <div className="tpose-explanation__body">
+            {/* 左: ピクトグラム */}
+            <div className="tpose-explanation__figure-wrap">
+              <PictogramFigure details={details} landmarks={_landmarks} selectedCondition={selectedCondition} />
+            </div>
 
-            <ConditionStep
-              condition="elbow"
-              passed={isElbowsOk}
-              title="両肘の角度（150°〜180°）"
-              subtitle="肩・肘・手首の三点で計算しています"
-              selected={selectedCondition === 'elbow'}
-              onSelect={(c) => setSelectedCondition((curr) => (curr === c ? null : c))}
-            >
-              {details && (
-                <div className="tpose-explanation__gauges">
-                  <div className="tpose-explanation__gauge-wrap">
-                    <span className="tpose-explanation__gauge-label">左: {details.left_elbow_angle}°</span>
-                    <AngleGaugeBar currentAngle={details.left_elbow_angle} minOk={150} maxOk={180} passed={details.is_left_elbow_ok} />
-                  </div>
-                  <div className="tpose-explanation__gauge-wrap">
-                    <span className="tpose-explanation__gauge-label">右: {details.right_elbow_angle}°</span>
-                    <AngleGaugeBar currentAngle={details.right_elbow_angle} minOk={150} maxOk={180} passed={details.is_right_elbow_ok} />
-                  </div>
-                </div>
-              )}
-            </ConditionStep>
+            {/* 右: 条件ステップ */}
+            <div className="tpose-explanation__panel">
+              <ol className="tpose-explanation__conditions">
+                <ConditionStep
+                  condition="shoulder"
+                  passed={isShouldersOk}
+                  title="両肩の角度（80°〜100°）"
+                  subtitle="肘・肩・腰の三点で計算しています"
+                  selected={selectedCondition === 'shoulder'}
+                  onSelect={(c) => setSelectedCondition((curr) => (curr === c ? null : c))}
+                >
+                  {details && (
+                    <div className="tpose-explanation__gauges">
+                      <div className="tpose-explanation__gauge-wrap">
+                        <span className="tpose-explanation__gauge-label">左: {details.left_shoulder_angle}°</span>
+                        <AngleGaugeBar currentAngle={details.left_shoulder_angle} minOk={80} maxOk={100} passed={details.is_left_shoulder_ok} />
+                      </div>
+                      <div className="tpose-explanation__gauge-wrap">
+                        <span className="tpose-explanation__gauge-label">右: {details.right_shoulder_angle}°</span>
+                        <AngleGaugeBar currentAngle={details.right_shoulder_angle} minOk={80} maxOk={100} passed={details.is_right_shoulder_ok} />
+                      </div>
+                    </div>
+                  )}
+                </ConditionStep>
 
-            <ConditionStep
-              condition="hold"
-              passed={isTPoseVisible || (details?.triggered ?? false)}
-              title="1秒間の維持"
-              selected={selectedCondition === 'hold'}
-              onSelect={(c) => setSelectedCondition((curr) => (curr === c ? null : c))}
-            >
-              {isHolding && (
-                <div className="tpose-explanation__step-subtitle">
-                  進行状況: {(holdProgress * 100).toFixed(0)}%
-                </div>
-              )}
-              <div className="tpose-explanation__progress-bar">
-                <div className="tpose-explanation__progress-fill" style={{ width: `${Math.min(Math.max(holdProgress, 0), 1) * 100}%` }} />
+                <ConditionStep
+                  condition="elbow"
+                  passed={isElbowsOk}
+                  title="両肘の角度（150°〜180°）"
+                  subtitle="肩・肘・手首の三点で計算しています"
+                  selected={selectedCondition === 'elbow'}
+                  onSelect={(c) => setSelectedCondition((curr) => (curr === c ? null : c))}
+                >
+                  {details && (
+                    <div className="tpose-explanation__gauges">
+                      <div className="tpose-explanation__gauge-wrap">
+                        <span className="tpose-explanation__gauge-label">左: {details.left_elbow_angle}°</span>
+                        <AngleGaugeBar currentAngle={details.left_elbow_angle} minOk={150} maxOk={180} passed={details.is_left_elbow_ok} />
+                      </div>
+                      <div className="tpose-explanation__gauge-wrap">
+                        <span className="tpose-explanation__gauge-label">右: {details.right_elbow_angle}°</span>
+                        <AngleGaugeBar currentAngle={details.right_elbow_angle} minOk={150} maxOk={180} passed={details.is_right_elbow_ok} />
+                      </div>
+                    </div>
+                  )}
+                </ConditionStep>
+
+                <ConditionStep
+                  condition="hold"
+                  passed={isTPoseVisible || (details?.triggered ?? false)}
+                  title="1秒間の維持"
+                  selected={selectedCondition === 'hold'}
+                  onSelect={(c) => setSelectedCondition((curr) => (curr === c ? null : c))}
+                >
+                  {isHolding && (
+                    <div className="tpose-explanation__step-subtitle">
+                      進行状況: {(holdProgress * 100).toFixed(0)}%
+                    </div>
+                  )}
+                  <div className="tpose-explanation__progress-bar">
+                    <div className="tpose-explanation__progress-fill" style={{ width: `${Math.min(Math.max(holdProgress, 0), 1) * 100}%` }} />
+                  </div>
+                </ConditionStep>
+              </ol>
+
+              {/* 判定結果ウィンドウ */}
+              <div className={`tpose-explanation__result-window${details?.triggered ? ' is-triggered' : ''}`}>
+                <p className="tpose-explanation__result-text">
+                  十字架判定：<span className="tpose-explanation__result-mark">{details?.triggered ? '◯' : '✖'}</span>
+                </p>
               </div>
-            </ConditionStep>
-          </ol>
+            </div>
+          </div>
+        </>
+      )}
 
-          {/* 判定結果ウィンドウ */}
-          <div className={`tpose-explanation__result-window${details?.triggered ? ' is-triggered' : ''}`}>
-            <p className="tpose-explanation__result-text">
-              十字架判定：<span className="tpose-explanation__result-mark">{details?.triggered ? '◯' : '✖'}</span>
-            </p>
+      {activeTab === 'algorithm' && (
+        <div className="tpose-explanation__algorithm">
+          <div className="tpose-explanation__body">
+            
+            {/* 左側: 視覚化（骨格）パネル */}
+            <div className="tpose-explanation__visual-panel">
+              <div className="tpose-explanation__figure-wrap">
+                <PictogramFigure details={details} landmarks={_landmarks} selectedCondition={selectedCondition} />
+              </div>
+              <div className="tpose-explanation__code-btn-container" style={{ marginTop: '1rem', textAlign: 'center' }}>
+                <button 
+                  className="tpose-explanation__view-code-btn"
+                  onClick={() => setIsCodeModalOpen(true)}
+                >
+                  実際のコードを見る
+                </button>
+              </div>
+            </div>
+
+            {/* 右側: 解説パネル */}
+            <div className="tpose-explanation__text-section">
+              <h3 className="tpose-explanation__text-title">十字架の判定のしくみ</h3>
+              
+              <div className="tpose-explanation__text-block">
+                <h4>十字架とは</h4>
+                <p>
+                  両腕を横に水平に広げて、体全体でT字(十字)を作るポーズです。
+                </p>
+              </div>
+
+              <div className="tpose-explanation__text-block">
+                <h4>角度の計算方法（内積）</h4>
+                <p>
+                  3つの関節点（例：肘・肩・腰）からベクトルを2本作り、内積の公式で角度を求めています。
+                </p>
+                <div className="tpose-explanation__math-formula">
+                  <span>cosθ = (a · b) / (|a| × |b|)</span>
+                  <span>θ = arccos(cosθ)</span>
+                </div>
+              </div>
+
+              <div className="tpose-explanation__text-block">
+                <h4>十字架判定のための条件</h4>
+                <p style={{ marginBottom: '1rem', lineHeight: '1.8' }}>
+                  このシステムでは、カメラ映像からMediaPipeで検出した骨格点の位置をもとに、十字のポーズの見た目から<br />
+                  <span style={{ display: 'inline-block', marginLeft: '1rem', fontWeight: 'bold' }}>
+                    ・腰-肩-肘が垂直<br />
+                    ・肩-肘-手首が水平<br />
+                  </span><br />
+                  という特徴が考えられます。この特徴を用いて判定を行っています。
+                </p>
+                
+                <div className="tpose-explanation__logic-item">
+                  <h5 className="logic-item-title">1. 肩の角度（80〜100°）</h5>
+                  <p className="logic-item-desc">腕が前や下ではなく、真横に水平に上がっているかを判断するためです。</p>
+                </div>
+                
+                <div className="tpose-explanation__logic-item">
+                  <h5 className="logic-item-title">2. 肘の角度（150〜180°）</h5>
+                  <p className="logic-item-desc">腕が曲がっておらず、まっすぐ水平に伸びているかを判断するためです。</p>
+                </div>
+
+                <div className="tpose-explanation__logic-item">
+                  <h5 className="logic-item-title">3. 1秒間の維持</h5>
+                  <p className="logic-item-desc">腕を振り回した際などに、一瞬だけ十字の形になった誤反応を防ぎ、意図したポーズのみを検知するためです。</p>
+                </div>
+
+              </div>
+            </div>
+
           </div>
         </div>
-      </div>
+      )}
+
+      {/* コード表示モーダル */}
+      {isCodeModalOpen && (
+        <div className="tpose-explanation__code-modal" onClick={() => setIsCodeModalOpen(false)}>
+          <div className="tpose-explanation__code-modal-content" onClick={e => e.stopPropagation()}>
+            <button className="tpose-explanation__code-modal-close" onClick={() => setIsCodeModalOpen(false)}>閉じる</button>
+            <div className="tpose-explanation__code-section">
+              <div className="tpose-explanation__code-header">
+                <span className="tpose-explanation__code-title">十字架判定の実際のコード</span>
+              </div>
+              <pre className="tpose-explanation__code-body">
+                <code>
+{`def angle(first, vertex, third):
+    first_x, first_y = point_xy(first)
+    vertex_x, vertex_y = point_xy(vertex)
+    third_x, third_y = point_xy(third)
+    first_vector = (first_x - vertex_x, first_y - vertex_y)
+    third_vector = (third_x - vertex_x, third_y - vertex_y)
+    first_length = math.hypot(*first_vector)
+    third_length = math.hypot(*third_vector)
+    if first_length == 0 or third_length == 0:
+        return 0.0
+    cosine = (first_vector[0] * third_vector[0] + first_vector[1] * third_vector[1]) / (first_length * third_length)
+    return math.degrees(math.acos(max(-1.0, min(1.0, cosine))))
+
+# MediaPipe Poseランドマーク（11:左肩, 12:右肩, 13:左肘, 14:右肘, 23:左腰, 24:右腰）
+left_shoulder_angle = angle(landmarks[13], landmarks[11], landmarks[23])
+right_shoulder_angle = angle(landmarks[14], landmarks[12], landmarks[24])
+
+# 左右両方の肩が80°〜100°の範囲内か判定
+is_left_shoulder_ok = 80 <= left_shoulder_angle <= 100
+is_right_shoulder_ok = 80 <= right_shoulder_angle <= 100
+
+# MediaPipe Poseランドマーク（11:左肩, 12:右肩, 13:左肘, 14:右肘, 15:左手首, 16:右手首）
+left_elbow_angle = angle(landmarks[11], landmarks[13], landmarks[15])
+right_elbow_angle = angle(landmarks[12], landmarks[14], landmarks[16])
+
+# 左右両方の肘が150°〜180°の範囲内か判定
+is_left_elbow_ok = 150 <= left_elbow_angle <= 180
+is_right_elbow_ok = 150 <= right_elbow_angle <= 180
+
+# すべての姿勢条件を満たしているか
+is_pose_valid = (is_left_shoulder_ok and is_right_shoulder_ok and
+                 is_left_elbow_ok and is_right_elbow_ok)
+
+# HoldDetector による1秒タイマー管理
+if not is_pose_valid:
+    start_time = None
+    tpose_detected = False
+else:
+    if start_time is None:
+        start_time = time.time()
+
+    elapsed = time.time() - start_time
+    tpose_detected = elapsed >= 1.0  # 1秒間維持で判定成功！`}
+                </code>
+              </pre>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 詳細オーバーレイ（全体に重なる） */}
       {selectedCondition !== null ? (

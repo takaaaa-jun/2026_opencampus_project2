@@ -297,6 +297,487 @@
   color: #15803d;
 }
 
+/* アルゴリズム解説タブ (コードとフローチャート) */
+.tpose-explanation__algorithm {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  align-items: center;
+}
+
+.tpose-explanation__alg-layout {
+  display: flex;
+  gap: 1.5rem;
+  align-items: stretch;
+  width: 100%;
+}
+
+.tpose-explanation__alg-layout--center {
+  justify-content: center;
+}
+
+/* 右側：テキスト解説ブロック */
+.tpose-explanation__text-section {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding: 0 1rem;
+}
+
+.tpose-explanation__text-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #1e293b;
+  margin: 0;
+  padding-bottom: 0.75rem;
+  border-bottom: 2px solid #e2e8f0;
+}
+
+.tpose-explanation__text-block {
+  background-color: #ffffff;
+  border-left: 4px solid #3b82f6;
+  border-radius: 4px 8px 8px 4px;
+  padding: 1.25rem;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+  border: 1px solid #e2e8f0;
+  border-left-width: 4px;
+}
+
+.tpose-explanation__text-block h4 {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #2563eb;
+  margin: 0 0 0.75rem 0;
+}
+
+.tpose-explanation__text-block p {
+  font-size: 0.95rem;
+  line-height: 1.7;
+  color: #475569;
+  margin: 0;
+}
+
+.tpose-explanation__text-block strong {
+  color: #0f172a;
+  background: linear-gradient(120deg, rgba(59, 130, 246, 0.1) 0%, rgba(59, 130, 246, 0) 100%);
+  padding: 0 0.25rem;
+}
+
+.tpose-explanation__math-formula {
+  background-color: #f8fafc;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  padding: 1rem;
+  margin: 1rem 0;
+  text-align: center;
+  font-family: 'Cambria Math', 'Times New Roman', serif;
+  font-size: 1.1rem;
+  color: #1e293b;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+/* 右側：フローチャート */
+.tpose-explanation__flowchart {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  /* 背景パネルを削除し、透過させる */
+  background: transparent;
+  box-shadow: none;
+  padding: 1rem 0;
+}
+
+.tpose-explanation__flowchart--large {
+  max-width: 900px;
+  flex: none;
+  width: 100%;
+}
+
+.tpose-explanation__flowchart-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 2px solid #e2e8f0;
+}
+
+.tpose-explanation__flowchart-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #1e293b;
+  margin: 0;
+}
+
+.tpose-explanation__view-code-btn {
+  background-color: #3b82f6;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  z-index: 10;
+}
+
+.tpose-explanation__view-code-btn:hover {
+  background-color: #2563eb;
+}
+
+.flowchart-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+
+.flowchart-step-label {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #2563eb;
+  margin-bottom: 0.5rem;
+  text-align: left;
+  width: 100%;
+  border-bottom: 1px solid #e2e8f0;
+  padding-bottom: 0.25rem;
+}
+
+.flowchart-row {
+  display: flex;
+  width: 100%;
+  gap: 1rem;
+  position: relative;
+}
+
+/* 吹き出し（バルーン） */
+.flowchart-balloon {
+  position: absolute;
+  background-color: #1e293b;
+  color: #f8fafc;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  line-height: 1.5;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 20;
+  width: max-content;
+  max-width: 300px;
+}
+
+.flowchart-balloon::after {
+  content: '';
+  position: absolute;
+  width: 0;
+  height: 0;
+  border-style: solid;
+}
+
+.flowchart-balloon--angle {
+  top: 50%;
+  right: -320px;
+  transform: translateY(-50%);
+}
+.flowchart-balloon--angle::after {
+  left: -10px;
+  top: 50%;
+  transform: translateY(-50%);
+  border-width: 8px 10px 8px 0;
+  border-color: transparent #1e293b transparent transparent;
+}
+
+.flowchart-balloon--tpose {
+  top: 50%;
+  left: -330px;
+  transform: translateY(-50%);
+}
+.flowchart-balloon--tpose::after {
+  right: -10px;
+  top: 50%;
+  transform: translateY(-50%);
+  border-width: 8px 0 8px 10px;
+  border-color: transparent transparent transparent #1e293b;
+}
+
+.flowchart-row--4col {
+  justify-content: space-between;
+}
+
+.flowchart-row--center {
+  justify-content: center;
+}
+
+.flowchart-box {
+  flex: 1;
+  background-color: #ffffff;
+  border: 2px solid #cbd5e1;
+  border-radius: 6px;
+  padding: 1rem 0.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  transition: all 0.2s ease;
+  min-width: 0; /* for flex shrinking */
+  z-index: 10;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.flowchart-box.is-ok {
+  background-color: #f0fdf4;
+  border-color: #22c55e;
+}
+
+.flowchart-box.is-ok .flowchart-label {
+  color: #166534;
+}
+.flowchart-box.is-ok .flowchart-value {
+  color: #15803d;
+}
+
+.flowchart-box.is-ng {
+  background-color: #fef2f2;
+  border-color: #ef4444;
+}
+
+.flowchart-box.is-ng .flowchart-label {
+  color: #991b1b;
+}
+.flowchart-box.is-ng .flowchart-value {
+  color: #b91c1c;
+}
+
+.flowchart-label {
+  font-size: 0.8rem;
+  color: #64748b;
+  text-align: center;
+  white-space: nowrap;
+  font-weight: 600;
+}
+
+.flowchart-var {
+  font-family: 'Consolas', 'Monaco', monospace;
+  font-size: 0.75rem;
+  color: #64748b;
+  margin-top: -0.25rem;
+  margin-bottom: 0.5rem;
+}
+
+.flowchart-value {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.flowchart-box--large {
+  flex: none;
+  width: 60%;
+  padding: 1.25rem;
+}
+
+.flowchart-box--large .flowchart-label {
+  font-size: 1rem;
+}
+
+.flowchart-box--large .flowchart-value {
+  font-size: 1.3rem;
+}
+
+.flowchart-box--timer {
+  flex: none;
+  width: 80%;
+  padding: 1rem;
+}
+
+.flowchart-timer-bar {
+  width: 100%;
+  height: 14px;
+  background-color: #e2e8f0;
+  border-radius: 7px;
+  overflow: hidden;
+  margin: 0.5rem 0;
+  border: 1px solid #cbd5e1;
+}
+
+.flowchart-timer-fill {
+  height: 100%;
+  background-color: #3b82f6;
+  transition: width 0.1s linear;
+}
+
+.flowchart-box--timer.is-ok .flowchart-timer-fill {
+  background-color: #22c55e;
+}
+
+/* 直結させるための矢印スタイル */
+.flowchart-arrows {
+  padding: 0;
+  margin: 0;
+  height: 40px; /* 矢印の長さ */
+  position: relative;
+  gap: 1rem;
+}
+
+.flowchart-arrow {
+  flex: 1;
+  position: relative;
+}
+
+/* 縦線の部分 */
+.flowchart-arrow::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 3px;
+  height: 100%;
+  background-color: #64748b;
+  z-index: 1;
+}
+
+/* 矢印の先（三角形）の部分 */
+.flowchart-arrow::after {
+  content: '';
+  position: absolute;
+  bottom: -2px; /* 少しめり込ませる */
+  left: 50%;
+  transform: translateX(-50%);
+  border-width: 8px 6px 0 6px;
+  border-style: solid;
+  border-color: #64748b transparent transparent transparent;
+  z-index: 2;
+}
+
+.flowchart-arrow-center {
+  position: relative;
+  width: 100%;
+  height: 40px;
+}
+
+.flowchart-arrow-center::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 3px;
+  height: 100%;
+  background-color: #64748b;
+  z-index: 1;
+}
+
+.flowchart-arrow-center::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 50%;
+  transform: translateX(-50%);
+  border-width: 8px 6px 0 6px;
+  border-style: solid;
+  border-color: #64748b transparent transparent transparent;
+  z-index: 2;
+}
+
+/* 4つから1つにまとまるSVG矢印 */
+.flowchart-merge-arrows {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 0;
+  padding: 0;
+}
+
+/* コードモーダル */
+.tpose-explanation__code-modal {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 40%;
+  z-index: 1000;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 2rem;
+  background: transparent;
+  pointer-events: none;
+}
+
+.tpose-explanation__code-modal-content {
+  background-color: #ffffff;
+  border-radius: 12px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 90%;
+  max-width: 950px;
+  padding: 1.25rem 1.5rem;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  pointer-events: auto;
+}
+
+.tpose-explanation__code-modal-close {
+  position: absolute;
+  top: 1rem;
+  right: 1.5rem;
+  background: none;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  color: #64748b;
+  font-size: 0.85rem;
+  cursor: pointer;
+  padding: 0.25rem 0.75rem;
+  z-index: 10;
+}
+
+.tpose-explanation__code-modal-close:hover {
+  background-color: #f1f5f9;
+  color: #1e293b;
+}
+
+.tpose-explanation__code-section {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.tpose-explanation__code-header {
+  margin-bottom: 1rem;
+}
+
+.tpose-explanation__code-dots {
+  display: none;
+}
+
+.tpose-explanation__code-title {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #1e293b;
+  font-family: inherit;
+}
+
+.tpose-explanation__code-body {
+  margin: 0;
+  padding: 1rem;
+  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+  font-size: 0.85rem;
+  line-height: 1.45;
+  color: #d4d4d4;
+  background-color: #1e293b;
+  border-radius: 8px;
+  white-space: pre;
+  word-break: keep-all;
+  overflow-x: auto;
+}
+
 /* 詳細オーバーレイ（全体に重なる） */
 .tpose-explanation__detail-overlay {
   position: absolute;
@@ -395,6 +876,7 @@
   color: #c4b5fd;
 }
 
+
 /* レスポンシブ */
 @media (max-width: 720px) {
   .tpose-explanation__body {
@@ -404,4 +886,26 @@
   .tpose-explanation__figure-wrap {
     min-height: 240px;
   }
+}
+.tpose-explanation__logic-item {
+  background-color: #f8fafc;
+  border-left: 4px solid #3b82f6;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  border-radius: 0 4px 4px 0;
+}
+
+.logic-item-title {
+  color: #1e293b;
+  font-size: 0.95rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+  margin-top: 0;
+}
+
+.logic-item-desc {
+  color: #475569;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  margin: 0;
 }
