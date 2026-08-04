@@ -34,6 +34,8 @@ type ChartPoint = {
   y: number
 }
 
+type ViewMode = 'practice' | 'guide'
+
 const FRAME_COUNT = 15
 const MOVEMENT_THRESHOLD = 0.1
 const CHART_WIDTH = 620
@@ -189,7 +191,176 @@ function WristHeightChart({ samples }: { samples: number[] }) {
   )
 }
 
+
+function SwingPageSelector({
+  viewMode,
+  onChange,
+}: {
+  viewMode: ViewMode
+  onChange: (viewMode: ViewMode) => void
+}) {
+  return (
+    <div className="swing-pageSelector" role="tablist" aria-label="振り下ろし説明の表示切替">
+      <button
+        type="button"
+        role="tab"
+        aria-selected={viewMode === 'practice'}
+        className={`swing-pageSelector__button ${viewMode === 'practice' ? 'is-selected' : ''}`}
+        onClick={() => onChange('practice')}
+      >
+        練習ページを見る
+      </button>
+      <button
+        type="button"
+        role="tab"
+        aria-selected={viewMode === 'guide'}
+        className={`swing-pageSelector__button ${viewMode === 'guide' ? 'is-selected' : ''}`}
+        onClick={() => onChange('guide')}
+      >
+        解説ページを見る
+      </button>
+    </div>
+  )
+}
+
+function SwingGuide({ onStartPractice }: { onStartPractice: () => void }) {
+  return (
+    <div className="swing-guide">
+      <header className="swing-guide__hero">
+        <div>
+          <span className="swing-guide__eyebrow">振り下ろし判定の全体像</span>
+          <h3>「振り下ろし」とはどのような動作か</h3>
+          <p>
+            左右の手を高い位置から低い位置へ連続して動かす動作です。
+            両手首の高さが，時間とともに「上→中→下」へ移動したかを調べます。
+          </p>
+        </div>
+        <span className="swing-guide__method">MediaPipe Pose</span>
+      </header>
+
+      <section className="swing-guide__section">
+        <div className="swing-guide__heading">
+          <span>1</span>
+          <div>
+            <h4>取得する骨格点</h4>
+            <p>左右の手首のY座標を各フレームで取得します。</p>
+          </div>
+        </div>
+
+        <div className="swing-guide__landmarks">
+          <article>
+            <span>15</span>
+            <div>
+              <strong>左手首</strong>
+              <p>左手の上下位置を取得します。</p>
+            </div>
+          </article>
+          <article>
+            <span>16</span>
+            <div>
+              <strong>右手首</strong>
+              <p>右手の上下位置を取得します。</p>
+            </div>
+          </article>
+        </div>
+
+        <div className="swing-guide__formula">
+          <strong>1フレームの手の高さ</strong>
+          <code>handsY = (左手首Y + 右手首Y) / 2</code>
+          <p>
+            左右を平均し，両手を使った動作全体を1つの高さとして扱います。
+          </p>
+        </div>
+      </section>
+
+      <section className="swing-guide__section">
+        <div className="swing-guide__heading">
+          <span>2</span>
+          <div>
+            <h4>15フレームを3区間に分ける</h4>
+            <p>一瞬の座標の揺れではなく，継続した下方向の移動を確認します。</p>
+          </div>
+        </div>
+
+        <div className="swing-guide__timeline">
+          <div className="is-top">
+            <span>1〜3フレーム</span>
+            <strong>序盤（上）</strong>
+            <p>3点の平均</p>
+          </div>
+          <b aria-hidden="true">→</b>
+          <div className="is-middle">
+            <span>7〜9フレーム</span>
+            <strong>中盤</strong>
+            <p>3点の平均</p>
+          </div>
+          <b aria-hidden="true">→</b>
+          <div className="is-bottom">
+            <span>13〜15フレーム</span>
+            <strong>終盤（下）</strong>
+            <p>3点の平均</p>
+          </div>
+        </div>
+
+        <p className="swing-guide__note">
+          各区間を3フレームの平均にすることで，骨格点の細かな揺れの影響を小さくします。
+          また，離れた3区間を比較することで，手が継続して下へ移動したかを確認できます。
+        </p>
+      </section>
+
+      <section className="swing-guide__section">
+        <div className="swing-guide__heading">
+          <span>3</span>
+          <div>
+            <h4>判定に使用する2つの条件</h4>
+            <p>次の条件を両方満たすと振り下ろしになります。</p>
+          </div>
+        </div>
+
+        <div className="swing-guide__conditions">
+          <article>
+            <span>条件1</span>
+            <h5>上から下へ順番に移動したか</h5>
+            <code>序盤平均 &lt; 中盤平均 &lt; 終盤平均</code>
+            <p>
+              画面座標のY値は，上で小さく，下で大きくなります。
+              この大小関係により，上→中→下の移動を確認できます。
+            </p>
+          </article>
+
+          <article>
+            <span>条件2</span>
+            <h5>十分な距離を移動したか</h5>
+            <code>終盤平均 - 序盤平均 ≧ 0.10</code>
+            <p>
+              順序だけでは小さな手ぶれも検出するため，0.10以上の移動を要求し，
+              意図した振り下ろしと細かな揺れを区別します。
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <section className="swing-guide__decision">
+        <span>最終判定</span>
+        <div>
+          <strong>15フレーム取得 ＋ 上→中→下 ＋ 移動量0.10以上</strong>
+          <p>
+            練習ページのグラフは，この判定に使用している15フレームと各区間の平均を可視化しています。
+          </p>
+        </div>
+      </section>
+
+      <div className="swing-guide__footer">
+        <button type="button" onClick={onStartPractice}>
+          練習ページで数値を確かめる
+        </button>
+      </div>
+    </div>
+  )
+}
+
 export function SwingExplanation({ detectionData }: ExplanationProps) {
+  const [viewMode, setViewMode] = useState<ViewMode>('practice')
   const [samples, setSamples] = useState<number[]>([])
   const lastDetectionDataRef = useRef<ExplanationProps['detectionData']>(null)
   const data = detectionData as DetectionDataLike | null
@@ -218,9 +389,19 @@ export function SwingExplanation({ detectionData }: ExplanationProps) {
     setSamples((previous) => [...previous.slice(-(FRAME_COUNT - 1)), handsHeight])
   }, [detectionData])
 
+  if (viewMode === 'guide') {
+    return (
+      <section className="swing swing--compact">
+        <SwingPageSelector viewMode={viewMode} onChange={setViewMode} />
+        <SwingGuide onStartPractice={() => setViewMode('practice')} />
+      </section>
+    )
+  }
+
   if (!hasPose) {
     return (
       <section className="swing">
+        <SwingPageSelector viewMode={viewMode} onChange={setViewMode} />
         <div className="swing-emptyState">
           <h3>振り下ろしの説明</h3>
           <p>骨格を検出中です。左手首 15・右手首 16 が見えると，15フレーム分の動きを記録します。</p>
@@ -249,6 +430,8 @@ export function SwingExplanation({ detectionData }: ExplanationProps) {
 
   return (
     <section className="swing swing--compact">
+      <SwingPageSelector viewMode={viewMode} onChange={setViewMode} />
+
       <div className={`swing-hero ${backendDetected ? 'swing-hero--ok' : 'swing-hero--ng'}`}>
         <div className="swing-hero__icon">{backendDetected ? '✓' : '!'}</div>
         <div className="swing-hero__content">
