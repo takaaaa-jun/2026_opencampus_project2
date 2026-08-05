@@ -839,3 +839,233 @@
     width: 100%;
   }
 }
+
+
+/* 解説ページの文字を読みやすく拡大 */
+.swing-pageSelector__button {
+  font-size: 15px;
+}
+
+.swing-guide__eyebrow {
+  font-size: 13px;
+}
+
+.swing-guide__hero h3 {
+  font-size: 24px;
+}
+
+.swing-guide__hero p {
+  font-size: 16px;
+  line-height: 1.75;
+}
+
+.swing-guide__method {
+  font-size: 13px;
+}
+
+.swing-guide__heading > span {
+  font-size: 14px;
+}
+
+.swing-guide__heading h4 {
+  font-size: 19px;
+}
+
+.swing-guide__heading p {
+  font-size: 15px;
+  line-height: 1.7;
+}
+
+.swing-guide__landmarks article > span {
+  font-size: 21px;
+}
+
+.swing-guide__landmarks strong {
+  font-size: 16px;
+}
+
+.swing-guide__landmarks p {
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.swing-guide__formula strong {
+  font-size: 15px;
+}
+
+.swing-guide__formula code,
+.swing-guide__conditions code {
+  font-size: 15px;
+  line-height: 1.55;
+}
+
+.swing-guide__formula p,
+.swing-guide__note {
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+.swing-guide__timeline span {
+  font-size: 13px;
+}
+
+.swing-guide__timeline strong {
+  font-size: 16px;
+}
+
+.swing-guide__timeline p {
+  font-size: 13px;
+}
+
+.swing-guide__conditions article > span {
+  font-size: 12px;
+}
+
+.swing-guide__conditions h5 {
+  font-size: 17px;
+}
+
+.swing-guide__conditions p {
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+.swing-guide__decision > span {
+  font-size: 13px;
+}
+
+.swing-guide__decision strong {
+  font-size: 16px;
+}
+
+.swing-guide__decision p {
+  font-size: 14px;
+  line-height: 1.65;
+}
+
+.swing-guide__footer button {
+  min-height: 46px;
+  padding: 0 18px;
+  font-size: 15px;
+}
+
+/* 骨格点図を使用している版にも適用 */
+.swing-guide__pose-phase {
+  font-size: 18px;
+}
+
+.swing-guide__pose-frames,
+.swing-guide__axis-title {
+  font-size: 13px;
+}
+
+.swing-guide__axis-label,
+.swing-guide__average-label {
+  font-size: 12px;
+}
+
+.swing-guide__wrist-number {
+  font-size: 11px;
+}
+
+.swing-guide__diagram-caption strong {
+  font-size: 15px;
+}
+
+.swing-guide__diagram-caption p {
+  font-size: 14px;
+  line-height: 1.65;
+}
+
+
+/* 練習ページの文字を少し拡大 */
+.swing-emptyState h3 {
+  font-size: 19px;
+}
+
+.swing-emptyState p {
+  font-size: 15px;
+  line-height: 1.55;
+}
+
+.swing-hero__content h3 {
+  font-size: 19px;
+}
+
+.swing-hero__content p {
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.swing-chartCard__header h4 {
+  font-size: 17px;
+}
+
+.swing-chartCard__header p {
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.swing-samplePill {
+  min-width: 120px;
+  padding: 6px 10px;
+  font-size: 13px;
+}
+
+.swing-chart__axisLabel,
+.swing-chart__frameLabel,
+.swing-chart__titleLabel {
+  font-size: 12px;
+}
+
+.swing-chartLegend__item {
+  padding: 6px 10px;
+  font-size: 13px;
+}
+
+.swing-phaseCard__header h4 {
+  font-size: 15px;
+}
+
+.swing-phaseCard__header span {
+  font-size: 12px;
+}
+
+.swing-phaseCard strong {
+  font-size: 25px;
+}
+
+.swing-phaseCard p {
+  font-size: 13px;
+}
+
+.swing-metricCard__title {
+  font-size: 15px;
+}
+
+.swing-barValue {
+  font-size: 23px;
+}
+
+.swing-barLimit {
+  font-size: 13px;
+}
+
+.swing-conditionRow strong {
+  font-size: 15px;
+}
+
+.swing-conditionChip {
+  min-width: 92px;
+  padding: 7px 11px;
+  font-size: 14px;
+}
+
+.swing-summaryRow strong {
+  font-size: 15px;
+}
+
+.swing-summaryRow p {
+  font-size: 13px;
+  line-height: 1.5;
+}
